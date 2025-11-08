@@ -3,9 +3,9 @@ package com.freelancenexus.userservice.service;
 import com.freelancenexus.userservice.dto.*;
 import com.freelancenexus.userservice.model.User;
 import com.freelancenexus.userservice.repository.UserRepository;
-import com.freelancenexus.userserviceservice.exception.DuplicateResourceException;
-import com.freelancenexus.userserviceservice.exception.UnauthorizedException;
-import com.freelancenexus.userserviceservice.exception.UserNotFoundException;
+import com.freelancenexus.userservice.exception.DuplicateResourceException;
+import com.freelancenexus.userservice.exception.UnauthorizedException;
+import com.freelancenexus.userservice.exception.UserNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

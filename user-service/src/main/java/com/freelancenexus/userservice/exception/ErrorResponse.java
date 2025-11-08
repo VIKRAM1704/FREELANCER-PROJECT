@@ -27,7 +27,4 @@ public class ErrorResponse {
         this.path = path;
     }
 
-	public ErrorResponse() {
-		// TODO Auto-generated constructor stub
-	}
 }

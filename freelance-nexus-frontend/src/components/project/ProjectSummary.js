@@ -1,38 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Alert, Button } from 'react-bootstrap';
-import aiService from '../../services/aiService';
+import React from 'react';
 
-const ProjectSummary = ({ projectId }) => {
-  const [summary, setSummary] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const generateSummary = async () => {
-    setLoading(true);
-    try {
-      const data = await aiService.generateProjectSummary(projectId);
-      setSummary(data.summary);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const ProjectSummary = ({ summary }) => {
+  if (!summary) return null;
 
   return (
-    <Card className="mt-3">
-      <Card.Header>
-        <i className="bi bi-robot me-2"></i>AI-Generated Summary
-      </Card.Header>
-      <Card.Body>
-        {summary ? (
-          <Alert variant="info">{summary}</Alert>
-        ) : (
-          <Button onClick={generateSummary} disabled={loading}>
-            {loading ? 'Generating...' : 'Generate AI Summary'}
-          </Button>
+    <div className="card shadow-sm ai-feature">
+      <div className="card-body">
+        <h5 className="mb-3">
+          <span className="ai-badge">AI</span> Project Summary
+        </h5>
+        <p>{summary.summary}</p>
+        
+        {summary.keyRequirements && (
+          <div className="mt-3">
+            <strong>Key Requirements:</strong>
+            <ul className="mt-2">
+              {summary.keyRequirements.map((req, idx) => (
+                <li key={idx}>{req}</li>
+              ))}
+            </ul>
+          </div>
         )}
-      </Card.Body>
-    </Card>
+
+        {summary.suggestedSkills && (
+          <div className="mt-3">
+            <strong>Suggested Skills:</strong>
+            <div className="mt-2">
+              {summary.suggestedSkills.map((skill, idx) => (
+                <span key={idx} className="badge bg-success me-1 mb-1">
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {summary.estimatedComplexity && (
+          <div className="mt-3">
+            <strong>Estimated Complexity:</strong>
+            <span className={`badge ms-2 bg-${
+              summary.estimatedComplexity === 'LOW' ? 'success' :
+              summary.estimatedComplexity === 'MEDIUM' ? 'warning' : 'danger'
+            }`}>
+              {summary.estimatedComplexity}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

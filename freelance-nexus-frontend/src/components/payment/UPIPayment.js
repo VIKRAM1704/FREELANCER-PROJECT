@@ -1,40 +1,85 @@
 import React, { useState } from 'react';
-import { Card, Form, Button, Alert } from 'react-bootstrap';
-import paymentService from '../../services/paymentService';
-import { toast } from 'react-toastify';
 
-const UPIPayment = ({ amount, projectId, onSuccess }) => {
+const UPIPayment = ({ amount, onPaymentSuccess, onPaymentFailure }) => {
   const [upiId, setUpiId] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
-  const handlePayment = async () => {
-    setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setProcessing(true);
+
     try {
-      await paymentService.processUPIPayment({ amount, projectId, upiId });
-      toast.success('Payment successful!');
-      if (onSuccess) onSuccess();
+      // Simulate UPI payment processing
+      // In production, this would integrate with actual UPI gateway
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const transactionId = 'TXN' + Date.now();
+      onPaymentSuccess({ transactionId, upiId, amount });
     } catch (error) {
-      toast.error('Payment failed');
+      onPaymentFailure(error);
     } finally {
-      setLoading(false);
+      setProcessing(false);
     }
   };
 
   return (
-    <Card>
-      <Card.Header>UPI Payment</Card.Header>
-      <Card.Body>
-        <Alert variant="info">Amount to pay: ₹{amount}</Alert>
-        <Form.Group className="mb-3">
-          <Form.Label>Enter UPI ID</Form.Label>
-          <Form.Control type="text" placeholder="yourname@upi" value={upiId}
-            onChange={(e) => setUpiId(e.target.value)} />
-        </Form.Group>
-        <Button onClick={handlePayment} disabled={loading || !upiId}>
-          {loading ? 'Processing...' : 'Pay with UPI'}
-        </Button>
-      </Card.Body>
-    </Card>
+    <div className="card shadow-sm">
+      <div className="card-header bg-success text-white">
+        <h5 className="mb-0">💳 Pay with UPI</h5>
+      </div>
+      <div className="card-body">
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Enter UPI ID</label>
+            <input
+              type="text"
+              className="form-control"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              placeholder="username@upi"
+              required
+            />
+            <small className="text-muted">
+              Supported: GPay, PhonePe, Paytm, BHIM
+            </small>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Amount</label>
+            <input
+              type="text"
+              className="form-control"
+              value={`₹${amount}`}
+              readOnly
+            />
+          </div>
+
+          <div className="alert alert-info">
+            <small>
+              <strong>Note:</strong> You will receive a payment request on your UPI app. 
+              Please approve it to complete the transaction.
+            </small>
+          </div>
+
+          <div className="d-grid">
+            <button 
+              type="submit" 
+              className="btn btn-success"
+              disabled={processing || !upiId}
+            >
+              {processing ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Processing...
+                </>
+              ) : (
+                `Pay ₹${amount}`
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 

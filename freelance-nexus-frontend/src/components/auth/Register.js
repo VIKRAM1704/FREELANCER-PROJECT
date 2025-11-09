@@ -10,6 +10,7 @@ const Register = () => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    phone: '',
     role: 'FREELANCER'
   });
   const [error, setError] = useState('');
@@ -39,11 +40,20 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      // Transform data to match backend DTO
+      const registerData = {
+        email: formData.email,
+        password: formData.password,
+        fullName: `${formData.firstName} ${formData.lastName}`,
+        phone: formData.phone || '',
+        role: formData.role
+      };
+      
       await authService.register(registerData);
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
@@ -100,19 +110,6 @@ const Register = () => {
                 </div>
 
                 <div className="mb-3">
-                  <label htmlFor="username" className="form-label">Username</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="username"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
                   <label htmlFor="email" className="form-label">Email</label>
                   <input
                     type="email"
@@ -122,6 +119,19 @@ const Register = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="phone" className="form-label">Phone (Optional)</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="+1234567890"
                   />
                 </div>
 

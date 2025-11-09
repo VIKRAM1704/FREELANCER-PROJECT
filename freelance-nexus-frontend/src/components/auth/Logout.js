@@ -9,7 +9,7 @@ const Logout = () => {
     logout();
   }, [logout]);
 
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/api/users/login" replace />;
 };
 
 export default Logout;

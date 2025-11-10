@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import aiService from '../../services/aiService';
@@ -9,11 +9,7 @@ const ProjectRecommendations = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchRecommendations();
-  }, []);
-
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     try {
       const data = await aiService.getProjectRecommendations(user.id);
       setRecommendations(data);
@@ -22,7 +18,11 @@ const ProjectRecommendations = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id]);
+
+  useEffect(() => {
+    fetchRecommendations();
+  }, [fetchRecommendations]);
 
   if (loading) return <Loader />;
 
@@ -54,11 +54,9 @@ const ProjectRecommendations = () => {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <h5 className="card-title">{rec.project.title}</h5>
-                    <span className="badge bg-success">
-                      {rec.matchScore}% Match
-                    </span>
+                    <span className="badge bg-success">{rec.matchScore}% Match</span>
                   </div>
-                  
+
                   <p className="card-text text-muted">
                     {rec.project.description?.substring(0, 150)}...
                   </p>
@@ -71,9 +69,7 @@ const ProjectRecommendations = () => {
                     <strong>Required Skills:</strong>
                     <div className="mt-2">
                       {rec.project.requiredSkills?.slice(0, 3).map((skill, idx) => (
-                        <span key={idx} className="badge bg-secondary me-1 mb-1">
-                          {skill}
-                        </span>
+                        <span key={idx} className="badge bg-secondary me-1 mb-1">{skill}</span>
                       ))}
                     </div>
                   </div>
@@ -86,16 +82,10 @@ const ProjectRecommendations = () => {
                   </div>
 
                   <div className="d-grid gap-2">
-                    <Link 
-                      to={`/projects/${rec.project.id}`} 
-                      className="btn btn-outline-primary"
-                    >
+                    <Link to={`/projects/${rec.project.id}`} className="btn btn-outline-primary">
                       View Details
                     </Link>
-                    <Link 
-                      to={`/freelancer/submit-proposal/${rec.project.id}`}
-                      className="btn btn-primary"
-                    >
+                    <Link to={`/freelancer/submit-proposal/${rec.project.id}`} className="btn btn-primary">
                       Submit Proposal
                     </Link>
                   </div>

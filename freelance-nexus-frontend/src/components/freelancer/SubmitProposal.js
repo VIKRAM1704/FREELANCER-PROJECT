@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import projectService from '../../services/projectService';
@@ -21,20 +21,20 @@ const SubmitProposal = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchProject();
-  }, [projectId]);
-
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const data = await projectService.getProjectById(projectId);
       setProject(data);
-    } catch (error) {
+    } catch (err) {
       setError('Failed to load project details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

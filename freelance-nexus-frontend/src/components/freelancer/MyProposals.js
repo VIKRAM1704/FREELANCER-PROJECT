@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import proposalService from '../../services/proposalService';
@@ -10,11 +10,7 @@ const MyProposals = () => {
   const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchProposals();
-  }, []);
-
-  const fetchProposals = async () => {
+  const fetchProposals = useCallback(async () => {
     try {
       const data = await proposalService.getFreelancerProposals(user.id);
       setProposals(data);
@@ -23,13 +19,17 @@ const MyProposals = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id]);
+
+  useEffect(() => {
+    fetchProposals();
+  }, [fetchProposals]);
 
   const handleWithdraw = async (proposalId) => {
     if (window.confirm('Are you sure you want to withdraw this proposal?')) {
       try {
         await proposalService.withdrawProposal(proposalId);
-        fetchProposals();
+        fetchProposals(); // safe now
       } catch (error) {
         alert('Failed to withdraw proposal');
       }

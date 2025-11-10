@@ -78,14 +78,13 @@ const Header = () => {
             {authenticated ? (
               <>
                 <li className="nav-item dropdown">
-                  <a 
-                    className="nav-link dropdown-toggle" 
-                    href="#" 
-                    role="button" 
-                    data-bs-toggle="dropdown"
-                  >
-                    👤 {user?.username || 'User'}
-                  </a>
+                <button 
+  className="nav-link dropdown-toggle bg-transparent border-0" 
+  type="button"
+  data-bs-toggle="dropdown"
+>
+  👤 {user?.username || 'User'}
+</button>
                   <ul className="dropdown-menu dropdown-menu-end">
                     {user?.roles?.includes('FREELANCER') && (
                       <li>

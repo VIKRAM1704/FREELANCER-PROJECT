@@ -1,128 +1,108 @@
-package com.freelancenexus.gateway.config;
+package com.freelancenexus.gateway.util;
 
-import com.freelancenexus.gateway.filter.AuthenticationFilter;
-import com.freelancenexus.gateway.filter.LoggingFilter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.gateway.route.RouteLocator;
-import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-/**
- * Gateway Route Configuration
- * 
- * This class defines all routes from the API Gateway to microservices.
- * Each route includes:
- * - Service ID for load balancing via Eureka
- * - Path predicates for request matching
- * - Filters for request/response processing
- * - Circuit breaker configuration for fault tolerance
- * 
- * Route Pattern: /api/{service-name}/** -> lb://{service-name}/api/{service-name}/**
- */
-@Configuration
-public class GatewayConfig {
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.List;
+import java.util.function.Function;
 
-    @Autowired
-    private AuthenticationFilter authenticationFilter;
+@Slf4j
+@Component
+public class JwtUtil {
 
-    @Autowired
-    private LoggingFilter loggingFilter;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
-    /**
-     * Configure Gateway Routes
-     * 
-     * Defines routes to all microservices with:
-     * - Load balancing (lb://)
-     * - Request logging
-     * - Circuit breaker protection
-     * - NO path rewriting (services expect /api prefix)
-     */
-    @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-        return builder.routes()
-            
-            // ========================================
-            // USER SERVICE ROUTES
-            // ========================================
-            .route("user-service", r -> r
-                .path("/api/users/**")
-                .filters(f -> f
-                    // REMOVED: .stripPrefix(1) - keep /api in path
-                    .filter(loggingFilter)
-                    .filter(authenticationFilter) // Add JWT authentication
-                    .circuitBreaker(config -> config
-                        .setName("userServiceCircuitBreaker")
-                        .setFallbackUri("forward:/fallback/user-service"))
-                    .retry(retryConfig -> retryConfig
-                        .setRetries(3)
-                        .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://user-service"))
-            
-            // ========================================
-            // FREELANCER SERVICE ROUTES
-            // ========================================
-            .route("freelancer-service", r -> r
-                .path("/api/freelancers/**")
-                .filters(f -> f
-                    .filter(loggingFilter)
-                    .filter(authenticationFilter)
-                    .circuitBreaker(config -> config
-                        .setName("freelancerServiceCircuitBreaker")
-                        .setFallbackUri("forward:/fallback/freelancer-service"))
-                    .retry(retryConfig -> retryConfig
-                        .setRetries(3)
-                        .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://freelancer-service"))
-            
-            // ========================================
-            // PROJECT SERVICE ROUTES
-            // ========================================
-            .route("project-service", r -> r
-                .path("/api/projects/**")
-                .filters(f -> f
-                    .filter(loggingFilter)
-                    .filter(authenticationFilter)
-                    .circuitBreaker(config -> config
-                        .setName("projectServiceCircuitBreaker")
-                        .setFallbackUri("forward:/fallback/project-service"))
-                    .retry(retryConfig -> retryConfig
-                        .setRetries(3)
-                        .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://project-service"))
-            
-            // ========================================
-            // PAYMENT SERVICE ROUTES
-            // ========================================
-            .route("payment-service", r -> r
-                .path("/api/payments/**")
-                .filters(f -> f
-                    .filter(loggingFilter)
-                    .filter(authenticationFilter)
-                    .circuitBreaker(config -> config
-                        .setName("paymentServiceCircuitBreaker")
-                        .setFallbackUri("forward:/fallback/payment-service"))
-                    .retry(retryConfig -> retryConfig
-                        .setRetries(3)
-                        .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://payment-service"))
-            
-            // ========================================
-            // NOTIFICATION SERVICE ROUTES
-            // ========================================
-            .route("notification-service", r -> r
-                .path("/api/notifications/**")
-                .filters(f -> f
-                    .filter(loggingFilter)
-                    .filter(authenticationFilter)
-                    .circuitBreaker(config -> config
-                        .setName("notificationServiceCircuitBreaker")
-                        .setFallbackUri("forward:/fallback/notification-service"))
-                    .retry(retryConfig -> retryConfig
-                        .setRetries(3)
-                        .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://notification-service"))
-            
-            .build();
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public Claims extractAllClaims(String token) {
+        try {
+            return Jwts.parser()                       // ✅ parser() instead of parserBuilder()
+                    .verifyWith(getSigningKey())        // ✅ verifyWith() instead of setSigningKey()
+                    .build()
+                    .parseSignedClaims(token)           // ✅ parseSignedClaims() instead of parseClaimsJws()
+                    .getPayload();                      // ✅ getPayload() instead of getBody()
+        } catch (Exception e) {
+            log.error("Error extracting claims from token: {}", e.getMessage());
+            throw new RuntimeException("Invalid JWT token", e);
+        }
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractUserId(String token) {
+        return extractClaim(token, claims -> {
+            Object userId = claims.get("userId");
+            return userId != null ? userId.toString() : null;
+        });
+    }
+
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public List<String> extractRoles(String token) {
+        return extractClaim(token, claims -> {
+            String role = claims.get("role", String.class);
+            return role != null ? List.of(role) : List.of();
+        });
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public boolean isTokenExpired(String token) {
+        try {
+            Date expiration = extractExpiration(token);
+            return expiration.before(new Date());
+        } catch (Exception e) {
+            log.error("Error checking token expiration: {}", e.getMessage());
+            return true;
+        }
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            extractAllClaims(token);
+
+            if (isTokenExpired(token)) {
+                log.warn("Token is expired");
+                return false;
+            }
+
+            log.debug("Token validated successfully");
+            return true;
+
+        } catch (Exception e) {
+            log.error("Token validation failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean hasRole(String token, String role) {
+        List<String> roles = extractRoles(token);
+        return roles.contains(role);
+    }
+
+    public boolean hasAnyRole(String token, List<String> requiredRoles) {
+        List<String> userRoles = extractRoles(token);
+        return requiredRoles.stream().anyMatch(userRoles::contains);
     }
 }

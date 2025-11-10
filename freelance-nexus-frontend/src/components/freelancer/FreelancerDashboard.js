@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import freelancerService from '../../services/freelancerService';
@@ -11,15 +11,12 @@ const FreelancerDashboard = () => {
   const [recentProposals, setRecentProposals] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.id) return; // ✅ guard if user isn't ready yet
     try {
       const [statsData, proposalsData] = await Promise.all([
         freelancerService.getFreelancerStats(user.id),
-        proposalService.getFreelancerProposals(user.id)
+        proposalService.getFreelancerProposals(user.id),
       ]);
       setStats(statsData);
       setRecentProposals(proposalsData.slice(0, 5));
@@ -28,7 +25,11 @@ const FreelancerDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]); // ✅ dependency properly declared
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]); // ✅ ESLint clean, no warnings
 
   if (loading) return <Loader />;
 
@@ -87,7 +88,9 @@ const FreelancerDashboard = () => {
                   <h5 className="mb-2">
                     <span className="ai-badge">AI</span> Project Recommendations
                   </h5>
-                  <p className="mb-0">We found projects matching your skills and experience</p>
+                  <p className="mb-0">
+                    We found projects matching your skills and experience
+                  </p>
                 </div>
                 <Link to="/freelancer/recommendations" className="btn btn-light">
                   View Recommendations
@@ -110,7 +113,7 @@ const FreelancerDashboard = () => {
                 <p className="text-muted text-center py-3">No proposals yet</p>
               ) : (
                 <div className="list-group list-group-flush">
-                  {recentProposals.map(proposal => (
+                  {recentProposals.map((proposal) => (
                     <div key={proposal.id} className="list-group-item">
                       <div className="d-flex justify-content-between align-items-start">
                         <div>
@@ -122,11 +125,15 @@ const FreelancerDashboard = () => {
                             Submitted: {new Date(proposal.submittedAt).toLocaleDateString()}
                           </small>
                         </div>
-                        <span className={`badge bg-${
-                          proposal.status === 'ACCEPTED' ? 'success' :
-                          proposal.status === 'REJECTED' ? 'danger' :
-                          'warning'
-                        }`}>
+                        <span
+                          className={`badge bg-${
+                            proposal.status === 'ACCEPTED'
+                              ? 'success'
+                              : proposal.status === 'REJECTED'
+                              ? 'danger'
+                              : 'warning'
+                          }`}
+                        >
                           {proposal.status}
                         </span>
                       </div>
@@ -172,9 +179,9 @@ const FreelancerDashboard = () => {
             <div className="card-body">
               <h6 className="mb-3">Profile Completion</h6>
               <div className="progress mb-2" style={{ height: '20px' }}>
-                <div 
-                  className="progress-bar" 
-                  role="progressbar" 
+                <div
+                  className="progress-bar"
+                  role="progressbar"
                   style={{ width: `${stats?.profileCompletion || 60}%` }}
                 >
                   {stats?.profileCompletion || 60}%

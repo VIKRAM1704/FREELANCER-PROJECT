@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import freelancerService from '../../services/freelancerService';
 import Loader from '../common/Loader';
@@ -21,11 +21,8 @@ const FreelancerProfile = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  // ✅ Stable version of fetchProfile
+  const fetchProfile = useCallback(async () => {
     try {
       const data = await freelancerService.getFreelancerProfile(user.id);
       setProfile(data);
@@ -34,7 +31,13 @@ const FreelancerProfile = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile();
+    }
+  }, [fetchProfile, user?.id]); // ✅ Dependencies fixed
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,26 +60,26 @@ const FreelancerProfile = () => {
   };
 
   const removeSkill = (skill) => {
-    setProfile({ 
-      ...profile, 
-      skills: profile.skills.filter(s => s !== skill) 
+    setProfile({
+      ...profile,
+      skills: profile.skills.filter((s) => s !== skill),
     });
   };
 
   const addPortfolioItem = () => {
     if (newPortfolio.title && newPortfolio.description) {
-      setProfile({ 
-        ...profile, 
-        portfolio: [...profile.portfolio, { ...newPortfolio, id: Date.now() }] 
+      setProfile({
+        ...profile,
+        portfolio: [...profile.portfolio, { ...newPortfolio, id: Date.now() }],
       });
       setNewPortfolio({ title: '', description: '', url: '' });
     }
   };
 
   const removePortfolioItem = (id) => {
-    setProfile({ 
-      ...profile, 
-      portfolio: profile.portfolio.filter(item => item.id !== id) 
+    setProfile({
+      ...profile,
+      portfolio: profile.portfolio.filter((item) => item.id !== id),
     });
   };
 
@@ -107,7 +110,9 @@ const FreelancerProfile = () => {
                     className="form-control"
                     rows="4"
                     value={profile.bio}
-                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, bio: e.target.value })
+                    }
                     placeholder="Tell us about yourself and your expertise..."
                   />
                 </div>
@@ -117,7 +122,9 @@ const FreelancerProfile = () => {
                     type="number"
                     className="form-control"
                     value={profile.hourlyRate}
-                    onChange={(e) => setProfile({ ...profile, hourlyRate: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, hourlyRate: e.target.value })
+                    }
                     placeholder="Enter your hourly rate"
                   />
                 </div>
@@ -137,10 +144,12 @@ const FreelancerProfile = () => {
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
                     placeholder="Add a skill"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                    onKeyPress={(e) =>
+                      e.key === 'Enter' && (e.preventDefault(), addSkill())
+                    }
                   />
-                  <button 
-                    className="btn btn-success" 
+                  <button
+                    className="btn btn-success"
                     type="button"
                     onClick={addSkill}
                   >
@@ -175,7 +184,12 @@ const FreelancerProfile = () => {
                       type="text"
                       className="form-control mb-2"
                       value={newPortfolio.title}
-                      onChange={(e) => setNewPortfolio({ ...newPortfolio, title: e.target.value })}
+                      onChange={(e) =>
+                        setNewPortfolio({
+                          ...newPortfolio,
+                          title: e.target.value,
+                        })
+                      }
                       placeholder="Project Title"
                     />
                   </div>
@@ -184,7 +198,12 @@ const FreelancerProfile = () => {
                       type="url"
                       className="form-control mb-2"
                       value={newPortfolio.url}
-                      onChange={(e) => setNewPortfolio({ ...newPortfolio, url: e.target.value })}
+                      onChange={(e) =>
+                        setNewPortfolio({
+                          ...newPortfolio,
+                          url: e.target.value,
+                        })
+                      }
                       placeholder="Project URL (optional)"
                     />
                   </div>
@@ -193,14 +212,19 @@ const FreelancerProfile = () => {
                       className="form-control mb-2"
                       rows="2"
                       value={newPortfolio.description}
-                      onChange={(e) => setNewPortfolio({ ...newPortfolio, description: e.target.value })}
+                      onChange={(e) =>
+                        setNewPortfolio({
+                          ...newPortfolio,
+                          description: e.target.value,
+                        })
+                      }
                       placeholder="Project Description"
                     />
                   </div>
                   <div className="col-12">
-                    <button 
+                    <button
                       type="button"
-                      className="btn btn-info" 
+                      className="btn btn-info"
                       onClick={addPortfolioItem}
                     >
                       Add Portfolio Item
@@ -215,7 +239,12 @@ const FreelancerProfile = () => {
                         <h6>{item.title}</h6>
                         <p className="text-muted mb-1">{item.description}</p>
                         {item.url && (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="small">
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="small"
+                          >
                             View Project →
                           </a>
                         )}
@@ -233,8 +262,8 @@ const FreelancerProfile = () => {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn btn-primary w-100"
               disabled={saving}
             >

@@ -39,16 +39,20 @@
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
         
-        <!-- Spring Boot OAuth2 Resource Server - JWT validation -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-        
         <!-- Spring Security - Security framework -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+         <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+        
+        <dependency>
+           <groupId>com.github.ben-manes.caffeine</groupId>
+           <artifactId>caffeine</artifactId>
         </dependency>
         
         <!-- Spring Boot Actuator - Monitoring and health checks -->
@@ -75,18 +79,20 @@
             <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
         </dependency>
         
-        <!-- JWT Support -->
+         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
             <version>0.12.3</version>
         </dependency>
+        
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
             <version>0.12.3</version>
             <scope>runtime</scope>
         </dependency>
+        
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>

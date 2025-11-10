@@ -42,22 +42,37 @@ public class GatewayConfig {
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
             
-            // ========================================
-            // USER SERVICE ROUTES
-            // ========================================
-            .route("user-service", r -> r
-                .path("/api/users/**")
-                .filters(f -> f
-                    // REMOVED: .stripPrefix(1) - keep /api in path
-                    .filter(loggingFilter)
-                    .filter(authenticationFilter) // Add JWT authentication
-                    .circuitBreaker(config -> config
-                        .setName("userServiceCircuitBreaker")
-                        .setFallbackUri("forward:/fallback/user-service"))
-                    .retry(retryConfig -> retryConfig
-                        .setRetries(3)
-                        .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://user-service"))
+             // ========================================
+// USER SERVICE ROUTES - PUBLIC (No Authentication)
+// ========================================
+.route("user-service-public", r -> r
+    .path("/api/users/register", "/api/users/login")
+    .filters(f -> f
+        .filter(loggingFilter)
+        // NO authenticationFilter for public endpoints
+        .circuitBreaker(config -> config
+            .setName("userServiceCircuitBreaker")
+            .setFallbackUri("forward:/fallback/user-service"))
+        .retry(retryConfig -> retryConfig
+            .setRetries(3)
+            .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
+    .uri("lb://user-service"))
+
+// ========================================
+// USER SERVICE ROUTES - PROTECTED (With Authentication)
+// ========================================
+.route("user-service-protected", r -> r
+    .path("/api/users/**")
+    .filters(f -> f
+        .filter(loggingFilter)
+        .filter(authenticationFilter) // JWT authentication for protected routes
+        .circuitBreaker(config -> config
+            .setName("userServiceCircuitBreaker")
+            .setFallbackUri("forward:/fallback/user-service"))
+        .retry(retryConfig -> retryConfig
+            .setRetries(3)
+            .setStatuses(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)))
+    .uri("lb://user-service"))
             
             // ========================================
             // FREELANCER SERVICE ROUTES

@@ -7,17 +7,17 @@ const userService = {
   },
 
   updateUserProfile: async (userId, userData) => {
-    const response = await api.put(`/users/${userId}`, userData);
+    const response = await api.put(`api/users/${userId}`, userData);
     return response.data;
   },
 
   getAllUsers: async () => {
-    const response = await api.get('/users');
+    const response = await api.get('api/users');
     return response.data;
   },
 
   deleteUser: async (userId) => {
-    const response = await api.delete(`/users/${userId}`);
+    const response = await api.delete(`api/users/${userId}`);
     return response.data;
   }
 };

@@ -22,12 +22,8 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         
-        // Allow specific origins (frontend URLs)
-        corsConfig.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "https://supreme-disco-xgjjxp6jpr4hvpgj-3000.app.github.dev" // Add your GitHub Codespaces URL
-        ));
+        // USE PATTERNS instead of specific origins to avoid duplicate header issue
+        corsConfig.setAllowedOriginPatterns(List.of("*"));
         
         // Allow all HTTP methods
         corsConfig.setAllowedMethods(Arrays.asList(

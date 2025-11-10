@@ -6,28 +6,24 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin(origins = "*") // Optional: Backup CORS support
 @Slf4j
+@RequiredArgsConstructor // This generates constructor for final fields
 public class UserController {
     
-    private final UserService userService;
-    
-    @Autowired  // or use constructor injection
+    @Autowired  
     public UserController(UserService userService) {
         this.userService = userService;
     }
-    
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 	
     @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> registerUser(@Valid @RequestBody UserRegistrationDTO registrationDTO) {
@@ -60,7 +56,7 @@ public class UserController {
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT', 'FREELANCER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT', 'ROLE_FREELANCER')")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
         log.info("Received request to get user by ID: {}", id);
         UserResponseDTO response = userService.getUserById(id);
@@ -68,7 +64,7 @@ public class UserController {
     }
     
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         log.info("Received request to get all users");
         List<UserResponseDTO> response = userService.getAllUsers();
@@ -76,7 +72,7 @@ public class UserController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         log.info("Received request to delete user with ID: {}", id);
         userService.deleteUser(id);

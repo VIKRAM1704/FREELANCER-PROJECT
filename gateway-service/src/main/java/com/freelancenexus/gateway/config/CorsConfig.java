@@ -14,21 +14,10 @@ import java.util.List;
  * 
  * Configures Cross-Origin Resource Sharing (CORS) to allow
  * frontend applications to make requests to the API Gateway.
- * 
- * Allowed Origins:
- * - http://localhost:3000 (React development server)
- * - http://localhost:3001 (Alternative React port)
- * - Production frontend URLs (add as needed)
  */
 @Configuration
 public class CorsConfig {
 
-    /**
-     * Configure CORS Filter
-     * 
-     * Allows frontend applications to make cross-origin requests
-     * with credentials (cookies, authorization headers).
-     */
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
@@ -36,7 +25,8 @@ public class CorsConfig {
         // Allow specific origins (frontend URLs)
         corsConfig.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000",
-            "http://localhost:3001"
+            "http://localhost:3001",
+            "https://supreme-disco-xgjjxp6jpr4hvpgj-3000.app.github.dev" // Add your GitHub Codespaces URL
         ));
         
         // Allow all HTTP methods

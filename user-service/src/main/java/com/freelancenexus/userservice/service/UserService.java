@@ -3,19 +3,18 @@ package com.freelancenexus.userservice.service;
 import com.freelancenexus.userservice.dto.*;
 import com.freelancenexus.userservice.model.User;
 import com.freelancenexus.userservice.repository.UserRepository;
+import com.freelancenexus.userservice.security.JwtTokenProvider;
 import com.freelancenexus.userservice.exception.DuplicateResourceException;
 import com.freelancenexus.userservice.exception.UnauthorizedException;
 import com.freelancenexus.userservice.exception.UserNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,10 +22,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
-	private static final Logger log = LoggerFactory.getLogger(UserService.class);
-	
+    
     private final UserRepository userRepository;
-    private final KeycloakService keycloakService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
     
     @Transactional
     public UserResponseDTO registerUser(UserRegistrationDTO registrationDTO) {
@@ -37,13 +36,10 @@ public class UserService {
             throw new DuplicateResourceException("User with email " + registrationDTO.getEmail() + " already exists");
         }
         
-        // Create user in Keycloak
-        String keycloakId = keycloakService.createKeycloakUser(registrationDTO);
-        
-        // Create user in local database
+        // Create user in database
         User user = new User();
-        user.setKeycloakId(keycloakId);
         user.setEmail(registrationDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(registrationDTO.getPassword()));
         user.setFullName(registrationDTO.getFullName());
         user.setPhone(registrationDTO.getPhone());
         user.setRole(registrationDTO.getRole());
@@ -60,14 +56,32 @@ public class UserService {
     public LoginResponseDTO loginUser(UserLoginDTO loginDTO) {
         log.info("Authenticating user with email: {}", loginDTO.getEmail());
         
-        // Authenticate with Keycloak
-        LoginResponseDTO loginResponse = keycloakService.authenticateUser(loginDTO);
-        
-        // Get user from database
+        // Find user by email
         User user = userRepository.findByEmail(loginDTO.getEmail())
-            .orElseThrow(() -> new UserNotFoundException("User not found with email: " + loginDTO.getEmail()));
+            .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
         
-        // Set user info in response
+        // Check if user is active
+        if (!user.getIsActive()) {
+            throw new UnauthorizedException("Account is inactive");
+        }
+        
+        // Verify password
+        if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            throw new UnauthorizedException("Invalid email or password");
+        }
+        
+        // Generate JWT token
+        String token = jwtTokenProvider.generateToken(
+            user.getEmail(), 
+            user.getId(), 
+            user.getRole().name()
+        );
+        
+        // Create response
+        LoginResponseDTO loginResponse = new LoginResponseDTO();
+        loginResponse.setAccessToken(token);
+        loginResponse.setTokenType("Bearer");
+        loginResponse.setExpiresIn(86400L); // 24 hours in seconds
         loginResponse.setUser(mapToResponseDTO(user));
         
         log.info("User authenticated successfully: {}", loginDTO.getEmail());
@@ -76,9 +90,9 @@ public class UserService {
     
     @Transactional(readOnly = true)
     public UserResponseDTO getCurrentUserProfile() {
-        String keycloakId = getCurrentUserKeycloakId();
+        Long userId = getCurrentUserId();
         
-        User user = userRepository.findByKeycloakId(keycloakId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new UserNotFoundException("User not found"));
         
         return mapToResponseDTO(user);
@@ -86,9 +100,9 @@ public class UserService {
     
     @Transactional
     public UserResponseDTO updateCurrentUserProfile(UserUpdateDTO updateDTO) {
-        String keycloakId = getCurrentUserKeycloakId();
+        Long userId = getCurrentUserId();
         
-        User user = userRepository.findByKeycloakId(keycloakId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new UserNotFoundException("User not found"));
         
         // Update fields if provided
@@ -128,33 +142,23 @@ public class UserService {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
         
-        // Delete from Keycloak
-        keycloakService.deleteKeycloakUser(user.getKeycloakId());
-        
-        // Delete from local database
         userRepository.delete(user);
-        
         log.info("User deleted successfully: {}", id);
     }
     
-    private String getCurrentUserKeycloakId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    private Long getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new UnauthorizedException("User not authenticated");
+        if (principal instanceof Long) {
+            return (Long) principal;
         }
         
-        if (authentication.getPrincipal() instanceof Jwt jwt) {
-            return jwt.getSubject();
-        }
-        
-        throw new UnauthorizedException("Invalid authentication token");
+        throw new UnauthorizedException("User not authenticated");
     }
     
     private UserResponseDTO mapToResponseDTO(User user) {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(user.getId());
-        dto.setKeycloakId(user.getKeycloakId());
         dto.setEmail(user.getEmail());
         dto.setFullName(user.getFullName());
         dto.setPhone(user.getPhone());

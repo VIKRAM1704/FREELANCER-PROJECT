@@ -1,10 +1,10 @@
 import api from './api';
 
 const authService = {
-  login: async (username, password) => {
-    const response = await api.post('/api/users/login', { username, password });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
+  login: async (email, password) => {
+    const response = await api.post('/api/users/login', { email, password });
+    if (response.data.accessToken) {
+      localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
     return response.data;
@@ -31,7 +31,7 @@ const authService = {
 
   hasRole: (role) => {
     const user = authService.getCurrentUser();
-    return user?.roles?.includes(role) || false;
+    return user?.role === role;
   }
 };
 

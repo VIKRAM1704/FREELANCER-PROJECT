@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import authService from '../../services/authService';
 
 const Login = () => {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login: keycloakLogin, authenticated } = useAuth();
+  const { login, authenticated } = useAuth();
 
   React.useEffect(() => {
     if (authenticated) {
@@ -26,17 +25,14 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await authService.login(credentials.username, credentials.password);
+      await login(credentials.email, credentials.password);
       navigate('/');
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleKeycloakLogin = async () => {
-    await keycloakLogin();
   };
 
   return (
@@ -55,13 +51,13 @@ const Login = () => {
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label htmlFor="username" className="form-label">Username</label>
+                  <label htmlFor="email" className="form-label">Email</label>
                   <input
-                    type="text"
+                    type="email"
                     className="form-control"
-                    id="username"
-                    name="username"
-                    value={credentials.username}
+                    id="email"
+                    name="email"
+                    value={credentials.email}
                     onChange={handleChange}
                     required
                   />
@@ -89,20 +85,9 @@ const Login = () => {
                 </button>
               </form>
 
-              <div className="text-center my-3">
-                <span className="text-muted">or</span>
-              </div>
-
-              <button 
-                className="btn btn-outline-secondary w-100"
-                onClick={handleKeycloakLogin}
-              >
-                Login with Keycloak SSO
-              </button>
-
               <div className="text-center mt-3">
                 <p className="text-muted">
-                  Don't have an account? <Link to="/api/users/register">Register here</Link>
+                  Don't have an account? <Link to="/register">Register here</Link>
                 </p>
               </div>
             </div>

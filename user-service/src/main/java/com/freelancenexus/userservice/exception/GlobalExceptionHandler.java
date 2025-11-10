@@ -59,23 +59,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
     
-    @ExceptionHandler(KeycloakException.class)
-    public ResponseEntity<ErrorResponse> handleKeycloakException(
-            KeycloakException ex, 
-            HttpServletRequest request) {
-        
-        log.error("Keycloak error: {}", ex.getMessage());
-        
-        ErrorResponse errorResponse = new ErrorResponse(
-            LocalDateTime.now(),
-            HttpStatus.INTERNAL_SERVER_ERROR.value(),
-            "Internal Server Error",
-            ex.getMessage(),
-            request.getRequestURI()
-        );
-        
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-    }
     
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(

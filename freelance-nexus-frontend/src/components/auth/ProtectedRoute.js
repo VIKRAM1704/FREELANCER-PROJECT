@@ -11,10 +11,10 @@ const ProtectedRoute = ({ children, roles = [] }) => {
   }
 
   if (!authenticated) {
-    return <Navigate to="/api/users/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (roles.length > 0 && !roles.some(role => user?.roles?.includes(role))) {
+  if (roles.length > 0 && !roles.includes(user?.role)) {
     return (
       <div className="container mt-5">
         <div className="alert alert-danger">

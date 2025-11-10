@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
-    @Index(name = "idx_keycloak_id", columnList = "keycloak_id"),
     @Index(name = "idx_email", columnList = "email"),
     @Index(name = "idx_role", columnList = "role")
 })
@@ -24,11 +23,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "keycloak_id", unique = true, nullable = false)
-    private String keycloakId;
-    
     @Column(name = "email", unique = true, nullable = false)
     private String email;
+    
+    @Column(name = "password", nullable = false)
+    private String password;
     
     @Column(name = "full_name", nullable = false)
     private String fullName;
@@ -47,10 +46,10 @@ public class User {
     private String profileImageUrl;
     
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }

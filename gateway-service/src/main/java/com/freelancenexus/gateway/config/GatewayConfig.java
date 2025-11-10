@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
  * - Filters for request/response processing
  * - Circuit breaker configuration for fault tolerance
  * 
- * Route Pattern: /api/{service-name}/** -> lb://{service-name}
+ * Route Pattern: /api/{service-name}/** -> lb://{service-name}/api/{service-name}/**
  */
 @Configuration
 public class GatewayConfig {
@@ -34,9 +34,9 @@ public class GatewayConfig {
      * 
      * Defines routes to all microservices with:
      * - Load balancing (lb://)
-     * - Path rewriting (strip /api prefix)
      * - Request logging
      * - Circuit breaker protection
+     * - NO path rewriting (services expect /api prefix)
      */
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
@@ -48,8 +48,9 @@ public class GatewayConfig {
             .route("user-service", r -> r
                 .path("/api/users/**")
                 .filters(f -> f
-                    .stripPrefix(1)  // Remove /api from path
+                    // REMOVED: .stripPrefix(1) - keep /api in path
                     .filter(loggingFilter)
+                    .filter(authenticationFilter) // Add JWT authentication
                     .circuitBreaker(config -> config
                         .setName("userServiceCircuitBreaker")
                         .setFallbackUri("forward:/fallback/user-service"))
@@ -64,8 +65,8 @@ public class GatewayConfig {
             .route("freelancer-service", r -> r
                 .path("/api/freelancers/**")
                 .filters(f -> f
-                    .stripPrefix(1)
                     .filter(loggingFilter)
+                    .filter(authenticationFilter)
                     .circuitBreaker(config -> config
                         .setName("freelancerServiceCircuitBreaker")
                         .setFallbackUri("forward:/fallback/freelancer-service"))
@@ -80,8 +81,8 @@ public class GatewayConfig {
             .route("project-service", r -> r
                 .path("/api/projects/**")
                 .filters(f -> f
-                    .stripPrefix(1)
                     .filter(loggingFilter)
+                    .filter(authenticationFilter)
                     .circuitBreaker(config -> config
                         .setName("projectServiceCircuitBreaker")
                         .setFallbackUri("forward:/fallback/project-service"))
@@ -96,8 +97,8 @@ public class GatewayConfig {
             .route("payment-service", r -> r
                 .path("/api/payments/**")
                 .filters(f -> f
-                    .stripPrefix(1)
                     .filter(loggingFilter)
+                    .filter(authenticationFilter)
                     .circuitBreaker(config -> config
                         .setName("paymentServiceCircuitBreaker")
                         .setFallbackUri("forward:/fallback/payment-service"))
@@ -112,8 +113,8 @@ public class GatewayConfig {
             .route("notification-service", r -> r
                 .path("/api/notifications/**")
                 .filters(f -> f
-                    .stripPrefix(1)
                     .filter(loggingFilter)
+                    .filter(authenticationFilter)
                     .circuitBreaker(config -> config
                         .setName("notificationServiceCircuitBreaker")
                         .setFallbackUri("forward:/fallback/notification-service"))

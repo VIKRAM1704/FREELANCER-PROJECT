@@ -13,20 +13,22 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Slf4j
 @Component
 public class AuthenticationFilter implements GatewayFilter {
 	
-	private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
-	
 	@Autowired
 	private JwtUtil jwtUtil;
+    
     // List of public endpoints that don't require authentication
-	private static final List<String> PUBLIC_ENDPOINTS = List.of("/api/users/register", "/api/users/login",
-			"/api/freelancers/public", "/api/projects/public", "/actuator");
+	private static final List<String> PUBLIC_ENDPOINTS = List.of(
+        "/api/users/register", 
+        "/api/users/login",
+        "/api/freelancers/public", 
+        "/api/projects/public", 
+        "/actuator"
+    );
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -73,9 +75,12 @@ public class AuthenticationFilter implements GatewayFilter {
 			log.debug("JWT token validated successfully for user: {}", username);
 
 			// Add user context to request headers for downstream services
-			ServerHttpRequest modifiedRequest = request.mutate().header("X-User-Id", userId)
-					.header("X-Username", username).header("X-User-Email", email)
-					.header("X-User-Roles", String.join(",", roles)).build();
+			ServerHttpRequest modifiedRequest = request.mutate()
+                .header("X-User-Id", userId)
+                .header("X-Username", username)
+                .header("X-User-Email", email)
+                .header("X-User-Roles", String.join(",", roles))
+                .build();
 
 			// Continue with modified request
 			return chain.filter(exchange.mutate().request(modifiedRequest).build());
@@ -87,27 +92,25 @@ public class AuthenticationFilter implements GatewayFilter {
 	}
 
 	/**
-	 * 
 	 * Check if the endpoint is public (no authentication required)
 	 */
 	private boolean isPublicEndpoint(String path) {
 		return PUBLIC_ENDPOINTS.stream().anyMatch(path::startsWith);
 	}
 
-/**
-
-Handle authentication errors
-*/
-private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {
-ServerHttpResponse response = exchange.getResponse();
-response.setStatusCode(status);
-response.getHeaders().add("Content-Type", "application/json");
-String errorResponse = String.format(
-	    "{\"error\": \"%s\", \"message\": \"%s\", \"status\": %d}",
-	    status.getReasonPhrase(),
-	    message,
-	    status.value()
-	);
-return response.writeWith(Mono.just(response.bufferFactory().wrap(errorResponse.getBytes())));
-}
+    /**
+     * Handle authentication errors
+     */
+    private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(status);
+        response.getHeaders().add("Content-Type", "application/json");
+        String errorResponse = String.format(
+            "{\"error\": \"%s\", \"message\": \"%s\", \"status\": %d}",
+            status.getReasonPhrase(),
+            message,
+            status.value()
+        );
+        return response.writeWith(Mono.just(response.bufferFactory().wrap(errorResponse.getBytes())));
+    }
 }

@@ -17,11 +17,15 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
-@RequiredArgsConstructor
 @Slf4j
 public class UserController {
     
-    private UserService userService;
+    private final UserService userService;
+    
+    @Autowired  // or use constructor injection
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
     
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 	

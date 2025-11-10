@@ -4,7 +4,6 @@ import authService from '../../services/authService';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',

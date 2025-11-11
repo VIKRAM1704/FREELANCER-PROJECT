@@ -1,0 +1,26 @@
+{
+  "name": "Freelance Nexus Dev",
+  "image": "mcr.microsoft.com/devcontainers/java:17",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    }
+  },
+  
+  "forwardPorts": [5432, 5672, 15672],
+  
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  
+  "remoteUser": "vscode",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}

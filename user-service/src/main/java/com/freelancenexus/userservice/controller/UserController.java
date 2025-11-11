@@ -15,15 +15,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*") // Optional: Backup CORS support
 @Slf4j
 @RequiredArgsConstructor // This generates constructor for final fields
 public class UserController {
-    
-    @Autowired  
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+      
+    private final UserService userService;
 	
     @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> registerUser(@Valid @RequestBody UserRegistrationDTO registrationDTO) {

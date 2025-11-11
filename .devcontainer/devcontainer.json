@@ -1,11 +1,11 @@
 {
   "name": "Freelance Nexus Dev",
-  "image": "mcr.microsoft.com/devcontainers/java:17",
+  "image": "mcr.microsoft.com/devcontainers/java:17-bookworm",
   
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest",
-      "moby": true
+      "moby": false
     }
   },
   

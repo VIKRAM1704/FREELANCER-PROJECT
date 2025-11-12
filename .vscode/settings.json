@@ -2,5 +2,18 @@
     "sonarlint.connectedMode.project": {
         "connectionId": "vikram1704",
         "projectKey": "VIKRAM1704_FREELANCER-PROJECT"
-    }
+    },
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "freelance-users",
+            "database": "freelance_nexus_users",
+            "username": "postgres",
+            "password": "123456"
+        }
+    ]
 }

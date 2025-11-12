@@ -20,8 +20,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PortfolioService {
     
-	private static final Logger log = LoggerFactory.getLogger(PortfolioService.class);
-	
     private final PortfolioRepository portfolioRepository;
     private final FreelancerRepository freelancerRepository;
     

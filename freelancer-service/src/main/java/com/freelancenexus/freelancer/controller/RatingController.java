@@ -17,9 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class RatingController {
-    
-	private static final Logger log = LoggerFactory.getLogger(RatingController.class);
-	
+
     private final RatingService ratingService;
     
     @PostMapping("/{id}/ratings")

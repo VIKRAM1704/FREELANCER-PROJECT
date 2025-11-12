@@ -42,7 +42,7 @@ public class GatewayConfig {
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
             
-             // ========================================
+// ========================================
 // USER SERVICE ROUTES - PUBLIC (No Authentication)
 // ========================================
 .route("user-service-public", r -> r

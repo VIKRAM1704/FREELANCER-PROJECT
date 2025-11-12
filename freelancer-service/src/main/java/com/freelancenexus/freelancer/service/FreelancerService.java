@@ -10,7 +10,6 @@ import com.freelancenexus.freelancer.exception.ResourceNotFoundException;
 import com.freelancenexus.freelancer.model.Freelancer;
 import com.freelancenexus.freelancer.model.Skill;
 import com.freelancenexus.freelancer.repository.FreelancerRepository;
-import com.freelancenexus.freelancer.repository.PortfolioRepository;
 import com.freelancenexus.freelancer.repository.RatingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +27,8 @@ import org.slf4j.LoggerFactory;
 @RequiredArgsConstructor
 @Slf4j
 public class FreelancerService {
-	private static final Logger log = LoggerFactory.getLogger(FreelancerService.class);
-	
+
     private final FreelancerRepository freelancerRepository;
-    private final PortfolioRepository portfolioRepository;
     private final RatingRepository ratingRepository;
     
     @Transactional

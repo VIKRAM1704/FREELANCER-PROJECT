@@ -21,8 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class RatingService {
-	private static final Logger log = LoggerFactory.getLogger(RatingService.class);
-	
+
     private final RatingRepository ratingRepository;
     private final FreelancerRepository freelancerRepository;
     private final FreelancerService freelancerService;

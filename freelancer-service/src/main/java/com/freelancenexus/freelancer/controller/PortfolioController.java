@@ -17,8 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class PortfolioController {
-	private static final Logger log = LoggerFactory.getLogger(PortfolioController.class);
-	
+
     private final PortfolioService portfolioService;
     
     @PostMapping("/{id}/portfolio")

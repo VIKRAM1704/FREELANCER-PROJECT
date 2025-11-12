@@ -20,8 +20,6 @@ import java.util.List;
 @Slf4j
 public class FreelancerController {
     
-	private static final Logger log = LoggerFactory.getLogger(FreelancerController.class);
-	
     private final FreelancerService freelancerService;
     
     @PostMapping

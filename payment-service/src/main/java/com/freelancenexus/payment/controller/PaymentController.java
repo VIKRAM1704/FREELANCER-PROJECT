@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,10 +21,9 @@ public class PaymentController {
     
     private final PaymentService paymentService;
     
-    /**
-     * Initiate a new payment
-     */
+    // Only clients can initiate payments
     @PostMapping("/initiate")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<PaymentResponseDTO> initiatePayment(
             @Valid @RequestBody PaymentRequestDTO request) {
         log.info("POST /api/payments/initiate - Initiating payment for project: {}", request.getProjectId());
@@ -40,10 +40,9 @@ public class PaymentController {
         }
     }
     
-    /**
-     * Verify UPI transaction and complete payment
-     */
+    // Both client and freelancer can verify payments
     @PostMapping("/verify")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<TransactionStatusDTO> verifyPayment(
             @RequestParam String transactionId) {
         log.info("POST /api/payments/verify - Verifying transaction: {}", transactionId);
@@ -57,10 +56,9 @@ public class PaymentController {
         }
     }
     
-    /**
-     * Get payment details by ID
-     */
+    // Both can view payment details
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<PaymentResponseDTO> getPaymentById(@PathVariable Long id) {
         log.info("GET /api/payments/{} - Fetching payment", id);
         
@@ -73,10 +71,8 @@ public class PaymentController {
         }
     }
     
-    /**
-     * Get payment by transaction ID
-     */
     @GetMapping("/transaction/{transactionId}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<PaymentResponseDTO> getPaymentByTransactionId(
             @PathVariable String transactionId) {
         log.info("GET /api/payments/transaction/{} - Fetching payment", transactionId);
@@ -90,10 +86,9 @@ public class PaymentController {
         }
     }
     
-    /**
-     * Get all payments for a project
-     */
+    // Both can view project payments
     @GetMapping("/project/{projectId}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<List<PaymentResponseDTO>> getPaymentsByProject(
             @PathVariable Long projectId) {
         log.info("GET /api/payments/project/{} - Fetching project payments", projectId);
@@ -102,10 +97,9 @@ public class PaymentController {
         return ResponseEntity.ok(payments);
     }
     
-    /**
-     * Get user payment history (both as payer and payee)
-     */
+    // Users can view their own payment history
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<List<PaymentResponseDTO>> getUserPaymentHistory(
             @PathVariable Long userId) {
         log.info("GET /api/payments/user/{} - Fetching user payment history", userId);
@@ -114,10 +108,9 @@ public class PaymentController {
         return ResponseEntity.ok(payments);
     }
     
-    /**
-     * Refund a payment
-     */
+    // Only clients can refund payments
     @PostMapping("/{id}/refund")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<PaymentResponseDTO> refundPayment(
             @PathVariable Long id,
             @RequestBody Map<String, String> request) {
@@ -137,10 +130,8 @@ public class PaymentController {
         }
     }
     
-    /**
-     * Get transaction history for a payment
-     */
     @GetMapping("/{paymentId}/history")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<List<PaymentHistoryDTO>> getTransactionHistory(
             @PathVariable Long paymentId) {
         log.info("GET /api/payments/{}/history - Fetching transaction history", paymentId);
@@ -149,10 +140,8 @@ public class PaymentController {
         return ResponseEntity.ok(history);
     }
     
-    /**
-     * Get all transaction history for a user
-     */
     @GetMapping("/history/{userId}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<List<PaymentHistoryDTO>> getUserTransactionHistory(
             @PathVariable Long userId) {
         log.info("GET /api/payments/history/{} - Fetching user transaction history", userId);
@@ -161,9 +150,7 @@ public class PaymentController {
         return ResponseEntity.ok(history);
     }
     
-    /**
-     * Health check endpoint
-     */
+    // Public health check
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> healthCheck() {
         return ResponseEntity.ok(Map.of(

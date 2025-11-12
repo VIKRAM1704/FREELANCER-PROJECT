@@ -1,0 +1,74 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------< com.freelancenexus:payment-service >-----------------
+[INFO] Building Payment Service 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.0:run (default-cli) > test-compile @ payment-service >>>
+[INFO] 
+[INFO] --- jacoco:0.8.11:prepare-agent (default) @ payment-service ---
+[INFO] argLine set to -javaagent:/home/vscode/.m2/repository/org/jacoco/org.jacoco.agent/0.8.11/org.jacoco.agent-0.8.11-runtime.jar=destfile=/workspaces/FREELANCER-PROJECT/payment-service/target/jacoco.exec
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ payment-service ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ payment-service ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ payment-service ---
+[INFO] skip non existing resourceDirectory /workspaces/FREELANCER-PROJECT/payment-service/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ payment-service ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 4 source files with javac [debug release 17] to target/test-classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/service/UPIPaymentServiceTest.java:[24,9] cannot find symbol
+  symbol:   class UPIPaymentDTO
+  location: class com.freelancenexus.payment.service.UPIPaymentServiceTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/service/UPIPaymentServiceTest.java:[86,9] cannot find symbol
+  symbol:   class UPIPaymentDTO
+  location: class com.freelancenexus.payment.service.UPIPaymentServiceTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/service/UPIPaymentServiceTest.java:[101,9] cannot find symbol
+  symbol:   class UPIPaymentDTO
+  location: class com.freelancenexus.payment.service.UPIPaymentServiceTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/controller/PaymentControllerTest.java:[69,25] cannot find symbol
+  symbol:   variable PaymentStatus
+  location: class com.freelancenexus.payment.controller.PaymentControllerTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/controller/PaymentControllerTest.java:[76,25] cannot find symbol
+  symbol:   variable PaymentStatus
+  location: class com.freelancenexus.payment.controller.PaymentControllerTest
+[INFO] 5 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5.820 s
+[INFO] Finished at: 2025-11-12T12:55:19Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:testCompile (default-testCompile) on project payment-service: Compilation failure: Compilation failure: 
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/service/UPIPaymentServiceTest.java:[24,9] cannot find symbol
+[ERROR]   symbol:   class UPIPaymentDTO
+[ERROR]   location: class com.freelancenexus.payment.service.UPIPaymentServiceTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/service/UPIPaymentServiceTest.java:[86,9] cannot find symbol
+[ERROR]   symbol:   class UPIPaymentDTO
+[ERROR]   location: class com.freelancenexus.payment.service.UPIPaymentServiceTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/service/UPIPaymentServiceTest.java:[101,9] cannot find symbol
+[ERROR]   symbol:   class UPIPaymentDTO
+[ERROR]   location: class com.freelancenexus.payment.service.UPIPaymentServiceTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/controller/PaymentControllerTest.java:[69,25] cannot find symbol
+[ERROR]   symbol:   variable PaymentStatus
+[ERROR]   location: class com.freelancenexus.payment.controller.PaymentControllerTest
+[ERROR] /workspaces/FREELANCER-PROJECT/payment-service/src/test/java/com/freelancenexus/payment/controller/PaymentControllerTest.java:[76,25] cannot find symbol
+[ERROR]   symbol:   variable PaymentStatus
+[ERROR]   location: class com.freelancenexus.payment.controller.PaymentControllerTest
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

@@ -2,6 +2,7 @@ package com.freelancenexus.projectservice.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.freelancenexus.projectservice.config.GeminiConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class GeminiIntegrationServiceTest {
     private RequestBodySpec bodySpec;
 
     @Mock
-    private RequestHeadersSpec<?> headersSpec;
+    private RequestHeadersSpec headersSpec;  // Removed generic type
 
     @Mock
     private ResponseSpec responseSpec;
@@ -47,7 +48,7 @@ class GeminiIntegrationServiceTest {
     void setUp() {
         when(geminiConfig.getModel()).thenReturn("test-model");
         when(geminiConfig.getApiKey()).thenReturn("test-key");
-        when(geminiConfig.getTimeout()).thenReturn(5000L);
+        when(geminiConfig.getTimeout()).thenReturn(5000);  // Changed from 5000L to 5000
         when(geminiConfig.getMaxRetries()).thenReturn(2);
     }
 
@@ -91,7 +92,8 @@ class GeminiIntegrationServiceTest {
         when(bodySpec.bodyValue(any())).thenReturn(headersSpec);
         when(headersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(jsonResponse));
-        JsonNode mockNode = mock(JsonNode.class);
+        
+        ObjectNode mockNode = mock(ObjectNode.class);  // Changed from JsonNode to ObjectNode
         when(objectMapper.readTree("{\"key\":\"value\"}")).thenReturn(mockNode);
 
         JsonNode result = geminiService.callGeminiForJson(prompt);
@@ -105,7 +107,9 @@ class GeminiIntegrationServiceTest {
         String prompt = "Test prompt";
         when(geminiService.callGemini(prompt)).thenReturn("invalid json");
         when(objectMapper.readTree(anyString())).thenThrow(new RuntimeException("parse error"));
-        when(objectMapper.createObjectNode()).thenReturn(mock(JsonNode.class));
+        
+        ObjectNode mockObjectNode = mock(ObjectNode.class);  // Changed to ObjectNode
+        when(objectMapper.createObjectNode()).thenReturn(mockObjectNode);
 
         JsonNode result = geminiService.callGeminiForJson(prompt);
 

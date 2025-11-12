@@ -146,16 +146,16 @@ public class UserService {
         log.info("User deleted successfully: {}", id);
     }
     
-    private Long getCurrentUserId() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        
-        if (principal instanceof Long) {
-            return (Long) principal;
-        }
-        
-        throw new UnauthorizedException("User not authenticated");
+private Long getCurrentUserId() {
+    var auth = SecurityContextHolder.getContext().getAuthentication();
+
+    if (auth != null && auth.getPrincipal() instanceof Long principal) {
+        return principal;
     }
-    
+
+    throw new UnauthorizedException("User not authenticated");
+}
+
     private UserResponseDTO mapToResponseDTO(User user) {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(user.getId());

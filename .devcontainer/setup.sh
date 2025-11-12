@@ -2,6 +2,38 @@
 
 echo "🚀 Setting up development environment..."
 
+# Install Node.js 20.x if not already installed or version is too old
+if ! command -v node &> /dev/null; then
+    echo "📦 Installing Node.js 20.x..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    echo "✅ Node.js installed successfully"
+    node --version
+    npm --version
+else
+    NODE_VERSION=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_VERSION" -lt 20 ]; then
+        echo "⚠️  Node.js version is $NODE_VERSION, upgrading to 20.x..."
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        echo "✅ Node.js upgraded successfully"
+    else
+        echo "✅ Node.js $(node --version) is already installed"
+    fi
+fi
+
+# Install Maven if not already installed
+if ! command -v mvn &> /dev/null; then
+    echo "📦 Installing Maven..."
+    sudo apt-get update -qq
+    sudo apt-get install -y maven
+    echo "✅ Maven installed successfully"
+    mvn --version
+else
+    echo "✅ Maven is already installed"
+    mvn --version
+fi
+
 # Wait for Docker to be ready
 echo "⏳ Waiting for Docker daemon..."
 timeout=30
@@ -82,6 +114,10 @@ fi
 
 echo ""
 echo "✅ Setup complete!"
+echo "☕ Java: $(java -version 2>&1 | head -n 1)"
+echo "📦 Maven: $(mvn --version | head -n 1)"
+echo "🟢 Node.js: $(node --version)"
+echo "📦 npm: $(npm --version)"
 echo "📊 PostgreSQL: localhost:5432 (user: postgres, password: 123456)"
 echo "🐰 RabbitMQ: localhost:5672"
 echo "🌐 RabbitMQ Management: http://localhost:15672 (guest/guest)"

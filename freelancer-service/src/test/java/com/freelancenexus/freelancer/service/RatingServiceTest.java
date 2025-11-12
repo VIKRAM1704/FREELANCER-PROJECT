@@ -1,6 +1,7 @@
 package com.freelancenexus.freelancer.service;
 
 import com.freelancenexus.freelancer.dto.RatingDTO;
+import com.freelancenexus.freelancer.exception.DuplicateRatingException;
 import com.freelancenexus.freelancer.exception.ResourceNotFoundException;
 import com.freelancenexus.freelancer.model.Freelancer;
 import com.freelancenexus.freelancer.model.Rating;
@@ -12,18 +13,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for RatingService.
- */
 @ExtendWith(MockitoExtension.class)
 class RatingServiceTest {
 
@@ -33,115 +31,107 @@ class RatingServiceTest {
     @Mock
     private FreelancerRepository freelancerRepository;
 
+    @Mock
+    private FreelancerService freelancerService;
+
     @InjectMocks
     private RatingService ratingService;
 
-    @Captor
-    private ArgumentCaptor<Rating> ratingCaptor;
-
     private Freelancer freelancer;
+    private Rating rating;
+    private RatingDTO ratingDTO;
 
     @BeforeEach
-    void init() {
+    void setUp() {
         freelancer = new Freelancer();
-        freelancer.setId(22L);
-        freelancer.setTitle("DevOps Engineer");
+        freelancer.setId(1L);
+
+        rating = new Rating();
+        rating.setId(1L);
+        rating.setClientId(10L);
+        rating.setProjectId(100L);
+        rating.setRating(5);
+        rating.setReview("Excellent work");
+        rating.setCreatedAt(LocalDateTime.now());
+
+        ratingDTO = new RatingDTO(1L, 10L, 100L, 5, "Excellent work", LocalDateTime.now());
     }
 
-    // -------------------------
-    // addRating tests
-    // -------------------------
-
     @Test
-    void shouldAddRating_whenFreelancerExists() {
-        // Arrange
-        RatingDTO dto = new RatingDTO();
-        dto.setFreelancerId(22L);
-        dto.setClientName("John Doe");
-        dto.setScore(4.5);
-        dto.setComment("Excellent work");
+    void shouldAddRatingSuccessfully() {
+        when(freelancerRepository.findById(1L)).thenReturn(Optional.of(freelancer));
+        when(ratingRepository.existsByFreelancerIdAndClientIdAndProjectId(1L, 10L, 100L)).thenReturn(false);
+        when(ratingRepository.save(any(Rating.class))).thenReturn(rating);
 
-        when(freelancerRepository.findById(22L)).thenReturn(Optional.of(freelancer));
-        when(ratingRepository.save(any(Rating.class))).thenAnswer(inv -> {
-            Rating saved = inv.getArgument(0);
-            saved.setId(1L);
-            return saved;
-        });
+        RatingDTO result = ratingService.addRating(1L, ratingDTO);
 
-        // Act
-        RatingDTO result = ratingService.addRating(dto);
-
-        // Assert
         assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("John Doe", result.getClientName());
-        assertEquals(4.5, result.getScore());
-        verify(freelancerRepository).findById(22L);
-        verify(ratingRepository).save(ratingCaptor.capture());
-
-        Rating captured = ratingCaptor.getValue();
-        assertEquals("Excellent work", captured.getComment());
-        assertThat(freelancer.getRatings()).isNotNull();
+        assertEquals(rating.getId(), result.getId());
+        verify(ratingRepository, times(1)).save(any(Rating.class));
+        verify(freelancerService, times(1)).updateFreelancerStats(1L);
     }
 
     @Test
-    void shouldThrow_whenFreelancerNotFoundOnAddRating() {
-        when(freelancerRepository.findById(100L)).thenReturn(Optional.empty());
-        RatingDTO dto = new RatingDTO();
-        dto.setFreelancerId(100L);
-        dto.setScore(3.0);
-        assertThrows(ResourceNotFoundException.class, () -> ratingService.addRating(dto));
+    void shouldThrowExceptionWhenFreelancerNotFoundForAddRating() {
+        when(freelancerRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> ratingService.addRating(1L, ratingDTO));
         verify(ratingRepository, never()).save(any());
-    }
-
-    // -------------------------
-    // getRatingsByFreelancerId tests
-    // -------------------------
-
-    @Test
-    void shouldReturnRatings_whenFreelancerExists() {
-        Rating r = new Rating();
-        r.setId(10L);
-        r.setClientName("Client A");
-        r.setScore(5.0);
-        r.setComment("Perfect!");
-        r.setCreatedAt(Instant.now());
-
-        when(ratingRepository.findByFreelancerId(22L)).thenReturn(List.of(r));
-
-        List<RatingDTO> result = ratingService.getRatingsByFreelancerId(22L);
-
-        assertEquals(1, result.size());
-        assertEquals("Client A", result.get(0).getClientName());
-        assertEquals(5.0, result.get(0).getScore());
-        verify(ratingRepository).findByFreelancerId(22L);
+        verify(freelancerService, never()).updateFreelancerStats(anyLong());
     }
 
     @Test
-    void shouldReturnEmptyList_whenNoRatingsFound() {
-        when(ratingRepository.findByFreelancerId(33L)).thenReturn(List.of());
-        List<RatingDTO> res = ratingService.getRatingsByFreelancerId(33L);
-        assertTrue(res.isEmpty());
+    void shouldThrowExceptionWhenDuplicateRating() {
+        when(freelancerRepository.findById(1L)).thenReturn(Optional.of(freelancer));
+        when(ratingRepository.existsByFreelancerIdAndClientIdAndProjectId(1L, 10L, 100L)).thenReturn(true);
+
+        assertThrows(DuplicateRatingException.class, () -> ratingService.addRating(1L, ratingDTO));
+        verify(ratingRepository, never()).save(any());
+        verify(freelancerService, never()).updateFreelancerStats(anyLong());
     }
 
-    // -------------------------
-    // internal mapping
-    // -------------------------
+    @Test
+    void shouldGetFreelancerRatings() {
+        when(freelancerRepository.existsById(1L)).thenReturn(true);
+        when(ratingRepository.findByFreelancerIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(rating));
+
+        List<RatingDTO> results = ratingService.getFreelancerRatings(1L);
+
+        assertFalse(results.isEmpty());
+        assertEquals(rating.getId(), results.get(0).getId());
+    }
 
     @Test
-    void shouldMapEntityToDTOProperly() {
-        Rating entity = new Rating();
-        entity.setId(7L);
-        entity.setClientName("Tester");
-        entity.setScore(3.5);
-        entity.setComment("Good enough");
-        entity.setCreatedAt(Instant.now());
+    void shouldThrowExceptionWhenFreelancerNotFoundForGetRatings() {
+        when(freelancerRepository.existsById(1L)).thenReturn(false);
 
-        RatingDTO dto = ratingService.toDTO(entity);
+        assertThrows(ResourceNotFoundException.class, () -> ratingService.getFreelancerRatings(1L));
+    }
 
-        assertEquals(7L, dto.getId());
-        assertEquals("Tester", dto.getClientName());
-        assertEquals(3.5, dto.getScore());
-        assertEquals("Good enough", dto.getComment());
+    @Test
+    void shouldReturnAverageRating() {
+        when(ratingRepository.calculateAverageRating(1L)).thenReturn(new BigDecimal("4.5"));
+
+        BigDecimal avg = ratingService.getAverageRating(1L);
+
+        assertEquals(new BigDecimal("4.5"), avg);
+    }
+
+    @Test
+    void shouldReturnZeroWhenNoAverageRating() {
+        when(ratingRepository.calculateAverageRating(1L)).thenReturn(null);
+
+        BigDecimal avg = ratingService.getAverageRating(1L);
+
+        assertEquals(BigDecimal.ZERO, avg);
+    }
+
+    @Test
+    void shouldReturnRatingCount() {
+        when(ratingRepository.countByFreelancerId(1L)).thenReturn(3L);
+
+        long count = ratingService.getRatingCount(1L);
+
+        assertEquals(3L, count);
     }
 }

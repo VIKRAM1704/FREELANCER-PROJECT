@@ -6,14 +6,18 @@ import com.freelancenexus.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -22,122 +26,171 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
-@WebMvcTest(UserController.class)
 class UserControllerTest {
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private UserController userController;
 
-    @MockBean
-    private UserService userService;
-
+    @Autowired
     private MockMvc mockMvc;
+
     private ObjectMapper objectMapper;
+
+    private UserRegistrationDTO registrationDTO;
     private UserResponseDTO userResponseDTO;
+    private UserLoginDTO loginDTO;
+    private LoginResponseDTO loginResponseDTO;
+    private UserUpdateDTO updateDTO;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
         objectMapper = new ObjectMapper();
+        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+
+        registrationDTO = new UserRegistrationDTO(
+                "test@example.com",
+                "password123",
+                "Test User",
+                "1234567890",
+                UserRole.CLIENT,
+                null
+        );
 
         userResponseDTO = new UserResponseDTO(
                 1L,
                 "test@example.com",
                 "Test User",
                 "1234567890",
-                UserRole.FREELANCER,
+                UserRole.CLIENT,
                 true,
                 null,
-                null,
-                null
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
+
+        loginDTO = new UserLoginDTO("test@example.com", "password123");
+
+        loginResponseDTO = new LoginResponseDTO(
+                "access-token",
+                "refresh-token",
+                3600L,
+                "Bearer",
+                userResponseDTO
+        );
+
+        updateDTO = new UserUpdateDTO("Updated User", "0987654321", null);
     }
 
-    // ------------------------- REGISTER USER -------------------------
     @Test
     void shouldRegisterUserSuccessfully() throws Exception {
-        UserRegistrationDTO registrationDTO = new UserRegistrationDTO(
-                "test@example.com",
-                "password123",
-                "Test User",
-                "1234567890",
-                UserRole.FREELANCER,
-                null
-        );
-
         when(userService.registerUser(any(UserRegistrationDTO.class))).thenReturn(userResponseDTO);
 
         mockMvc.perform(post("/api/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registrationDTO)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("test@example.com"));
+                .andExpect(jsonPath("$.id").value(userResponseDTO.getId()))
+                .andExpect(jsonPath("$.email").value(userResponseDTO.getEmail()));
+
+        verify(userService, times(1)).registerUser(any(UserRegistrationDTO.class));
     }
 
-    // ------------------------- LOGIN USER -------------------------
     @Test
     void shouldLoginUserSuccessfully() throws Exception {
-        UserLoginDTO loginDTO = new UserLoginDTO("test@example.com", "password123");
-        LoginResponseDTO loginResponse = new LoginResponseDTO("token123", null, 86400L, "Bearer", userResponseDTO);
-
-        when(userService.loginUser(any(UserLoginDTO.class))).thenReturn(loginResponse);
+        when(userService.loginUser(any(UserLoginDTO.class))).thenReturn(loginResponseDTO);
 
         mockMvc.perform(post("/api/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("token123"));
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.user.email").value(userResponseDTO.getEmail()));
+
+        verify(userService, times(1)).loginUser(any(UserLoginDTO.class));
     }
 
-    // ------------------------- GET CURRENT USER PROFILE -------------------------
     @Test
+    @WithMockUser
     void shouldReturnCurrentUserProfile() throws Exception {
         when(userService.getCurrentUserProfile()).thenReturn(userResponseDTO);
 
         mockMvc.perform(get("/api/users/profile"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("test@example.com"));
+                .andExpect(jsonPath("$.email").value(userResponseDTO.getEmail()));
+
+        verify(userService, times(1)).getCurrentUserProfile();
     }
 
-    // ------------------------- UPDATE CURRENT USER PROFILE -------------------------
     @Test
+    @WithMockUser
     void shouldUpdateCurrentUserProfile() throws Exception {
-        UserUpdateDTO updateDTO = new UserUpdateDTO("Updated Name", "9999999999", null);
         when(userService.updateCurrentUserProfile(any(UserUpdateDTO.class))).thenReturn(userResponseDTO);
 
         mockMvc.perform(put("/api/users/profile")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("test@example.com"));
+                .andExpect(jsonPath("$.email").value(userResponseDTO.getEmail()));
+
+        verify(userService, times(1)).updateCurrentUserProfile(any(UserUpdateDTO.class));
     }
 
-    // ------------------------- GET USER BY ID -------------------------
     @Test
+    @WithMockUser
     void shouldReturnUserById() throws Exception {
         when(userService.getUserById(1L)).thenReturn(userResponseDTO);
 
-        mockMvc.perform(get("/api/users/1"))
+        mockMvc.perform(get("/api/users/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1));
+                .andExpect(jsonPath("$.id").value(userResponseDTO.getId()));
+
+        verify(userService, times(1)).getUserById(1L);
     }
 
-    // ------------------------- GET ALL USERS -------------------------
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldReturnAllUsers() throws Exception {
-        when(userService.getAllUsers()).thenReturn(List.of(userResponseDTO));
+        List<UserResponseDTO> users = Arrays.asList(userResponseDTO);
+        when(userService.getAllUsers()).thenReturn(users);
 
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1));
+                .andExpect(jsonPath("$.length()").value(users.size()));
+
+        verify(userService, times(1)).getAllUsers();
     }
 
-    // ------------------------- DELETE USER -------------------------
     @Test
-    void shouldDeleteUser() throws Exception {
+    @WithMockUser(roles = "ADMIN")
+    void shouldDeleteUserSuccessfully() throws Exception {
         doNothing().when(userService).deleteUser(1L);
 
-        mockMvc.perform(delete("/api/users/1"))
+        mockMvc.perform(delete("/api/users/{id}", 1L))
                 .andExpect(status().isNoContent());
+
+        verify(userService, times(1)).deleteUser(1L);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidRegistration() throws Exception {
+        UserRegistrationDTO invalidDTO = new UserRegistrationDTO("", "", "", "", null, null);
+
+        mockMvc.perform(post("/api/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidDTO)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidLogin() throws Exception {
+        UserLoginDTO invalidDTO = new UserLoginDTO("", "");
+
+        mockMvc.perform(post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidDTO)))
+                .andExpect(status().isBadRequest());
     }
 }

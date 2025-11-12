@@ -1,19 +1,13 @@
 package com.freelancenexus.notification.listener;
 
-import com.freelancenexus.notification.dto.NotificationDTO;
-import com.freelancenexus.notification.event.ProposalAcceptedEvent;
-import com.freelancenexus.notification.event.ProposalRejectedEvent;
-import com.freelancenexus.notification.event.ProposalSubmittedEvent;
+import com.freelancenexus.notification.dto.ProposalEventDTO;
 import com.freelancenexus.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,74 +16,49 @@ class ProposalEventListenerTest {
     @Mock
     private NotificationService notificationService;
 
-    @Mock
-    private Logger log;
-
     @InjectMocks
-    private ProposalEventListener proposalEventListener;
+    private ProposalEventListener listener;
 
-    private ProposalSubmittedEvent submittedEvent;
-    private ProposalAcceptedEvent acceptedEvent;
-    private ProposalRejectedEvent rejectedEvent;
+    private ProposalEventDTO proposalEvent;
 
     @BeforeEach
     void setUp() {
-        submittedEvent = new ProposalSubmittedEvent(this, "freelancer123", "Cool Project");
-        acceptedEvent = new ProposalAcceptedEvent(this, "freelancer123", "Cool Project");
-        rejectedEvent = new ProposalRejectedEvent(this, "freelancer123", "Cool Project");
+        proposalEvent = new ProposalEventDTO();
+        proposalEvent.setProposalId(10L);
+        proposalEvent.setProjectId(1L);
+        proposalEvent.setProjectTitle("Test Project");
+        proposalEvent.setFreelancerId(200L);
+        proposalEvent.setFreelancerName("Freelancer Name");
+        proposalEvent.setFreelancerEmail("freelancer@example.com");
+        proposalEvent.setClientId(100L);
+        proposalEvent.setClientEmail("client@example.com");
+        proposalEvent.setBidAmount(250.0);
+        proposalEvent.setStatus("SUBMITTED");
     }
 
     @Test
-    void testHandleProposalSubmitted_Success() {
-        doNothing().when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldHandleProposalSubmittedEvent() {
+        doNothing().when(notificationService).handleProposalSubmitted(proposalEvent);
 
-        proposalEventListener.handleProposalSubmitted(submittedEvent);
+        listener.handleProposalSubmitted(proposalEvent);
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        verify(notificationService, times(1)).handleProposalSubmitted(proposalEvent);
     }
 
     @Test
-    void testHandleProposalAccepted_Success() {
-        doNothing().when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldThrowWhenProposalSubmittedFails() {
+        doThrow(new RuntimeException("Service failure"))
+                .when(notificationService).handleProposalSubmitted(proposalEvent);
 
-        proposalEventListener.handleProposalAccepted(acceptedEvent);
+        RuntimeException exception = null;
+        try {
+            listener.handleProposalSubmitted(proposalEvent);
+        } catch (RuntimeException e) {
+            exception = e;
+        }
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
-    }
-
-    @Test
-    void testHandleProposalRejected_Success() {
-        doNothing().when(notificationService).sendNotification(any(NotificationDTO.class));
-
-        proposalEventListener.handleProposalRejected(rejectedEvent);
-
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
-    }
-
-    @Test
-    void testHandleProposalSubmitted_ExceptionHandled() {
-        doThrow(new RuntimeException("Mail fail")).when(notificationService).sendNotification(any(NotificationDTO.class));
-
-        proposalEventListener.handleProposalSubmitted(submittedEvent);
-
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
-    }
-
-    @Test
-    void testHandleProposalAccepted_ExceptionHandled() {
-        doThrow(new RuntimeException("Mail fail")).when(notificationService).sendNotification(any(NotificationDTO.class));
-
-        proposalEventListener.handleProposalAccepted(acceptedEvent);
-
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
-    }
-
-    @Test
-    void testHandleProposalRejected_ExceptionHandled() {
-        doThrow(new RuntimeException("Mail fail")).when(notificationService).sendNotification(any(NotificationDTO.class));
-
-        proposalEventListener.handleProposalRejected(rejectedEvent);
-
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        assert exception != null;
+        assert exception.getMessage().equals("Service failure");
+        verify(notificationService, times(1)).handleProposalSubmitted(proposalEvent);
     }
 }

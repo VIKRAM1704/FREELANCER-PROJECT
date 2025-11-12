@@ -3,7 +3,6 @@ package com.freelancenexus.projectservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.freelancenexus.projectservice.dto.ProjectCreateDTO;
 import com.freelancenexus.projectservice.dto.ProjectDTO;
-import com.freelancenexus.projectservice.model.ProjectStatus;
 import com.freelancenexus.projectservice.service.ProjectService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,9 +16,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -34,68 +36,138 @@ class ProjectControllerTest {
     private ProjectController projectController;
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private ProjectDTO sampleProject;
+    private ObjectMapper objectMapper;
+
+    private ProjectCreateDTO createDTO;
+    private ProjectDTO projectDTO;
 
     @BeforeEach
-    void setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(projectController)
-                .setControllerAdvice(projectController)
-                .build();
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(projectController).build();
+        objectMapper = new ObjectMapper();
 
-        sampleProject = new ProjectDTO(1L, 1L, "Title", "Desc", 
-                BigDecimal.valueOf(100), BigDecimal.valueOf(500), 10, List.of("Java"),
-                "IT", ProjectStatus.OPEN, LocalDate.now().plusDays(10), null, null, null, 0);
+        createDTO = new ProjectCreateDTO(1L, "Test Project", "Description",
+                BigDecimal.valueOf(1000), BigDecimal.valueOf(5000), 30,
+                Arrays.asList("Java", "Spring"), "IT", LocalDate.now().plusDays(5));
+
+        projectDTO = new ProjectDTO(1L, 1L, "Test Project", "Description",
+                BigDecimal.valueOf(1000), BigDecimal.valueOf(5000), 30,
+                Arrays.asList("Java", "Spring"), "IT", null, LocalDate.now().plusDays(5),
+                null, LocalDateTime.now(), LocalDateTime.now(), 0);
     }
 
     @Test
-    void shouldCreateProject_whenPostCalled() throws Exception {
-        ProjectCreateDTO createDTO = new ProjectCreateDTO(1L, "Title", "Desc", 
-                BigDecimal.valueOf(100), BigDecimal.valueOf(500), 10, List.of("Java"), "IT", LocalDate.now().plusDays(5));
-        when(projectService.createProject(any(ProjectCreateDTO.class))).thenReturn(sampleProject);
+    void shouldCreateProjectSuccessfully() throws Exception {
+        when(projectService.createProject(any(ProjectCreateDTO.class))).thenReturn(projectDTO);
 
         mockMvc.perform(post("/api/projects")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createDTO)))
                 .andExpect(status().isCreated())
-                .andExpect(content().json(objectMapper.writeValueAsString(sampleProject)));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").value("Test Project"));
     }
 
     @Test
-    void shouldGetProject_whenGetByIdCalled() throws Exception {
-        when(projectService.getProjectById(1L)).thenReturn(sampleProject);
+    void shouldGetProjectById() throws Exception {
+        when(projectService.getProjectById(1L)).thenReturn(projectDTO);
 
-        mockMvc.perform(get("/api/projects/1"))
+        mockMvc.perform(get("/api/projects/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(sampleProject)));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").value("Test Project"));
     }
 
     @Test
-    void shouldUpdateProject_whenPutCalled() throws Exception {
-        ProjectCreateDTO updateDTO = new ProjectCreateDTO(1L, "Updated", "Desc", 
-                BigDecimal.valueOf(200), BigDecimal.valueOf(600), 12, List.of("Java"), "IT", LocalDate.now().plusDays(5));
-        when(projectService.updateProject(any(Long.class), any(ProjectCreateDTO.class))).thenReturn(sampleProject);
+    void shouldUpdateProjectSuccessfully() throws Exception {
+        when(projectService.updateProject(eq(1L), any(ProjectCreateDTO.class))).thenReturn(projectDTO);
 
-        mockMvc.perform(put("/api/projects/1")
+        mockMvc.perform(put("/api/projects/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateDTO)))
+                        .content(objectMapper.writeValueAsString(createDTO)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(sampleProject)));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").value("Test Project"));
     }
 
     @Test
-    void shouldDeleteProject_whenDeleteCalled() throws Exception {
-        mockMvc.perform(delete("/api/projects/1"))
+    void shouldDeleteProjectSuccessfully() throws Exception {
+        doNothing().when(projectService).deleteProject(1L);
+
+        mockMvc.perform(delete("/api/projects/{id}", 1L))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void shouldReturnBadRequest_whenServiceThrowsException() throws Exception {
-        when(projectService.getProjectById(1L)).thenThrow(new RuntimeException("Not found"));
+    void shouldGetAllProjects() throws Exception {
+        List<ProjectDTO> projects = List.of(projectDTO);
+        when(projectService.getAllProjects()).thenReturn(projects);
 
-        mockMvc.perform(get("/api/projects/1"))
+        mockMvc.perform(get("/api/projects"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void shouldGetClientProjects() throws Exception {
+        List<ProjectDTO> projects = List.of(projectDTO);
+        when(projectService.getProjectsByClientId(1L)).thenReturn(projects);
+
+        mockMvc.perform(get("/api/projects/client/{clientId}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void shouldAssignFreelancerToProject() throws Exception {
+        when(projectService.assignFreelancer(1L, 2L)).thenReturn(projectDTO);
+
+        mockMvc.perform(put("/api/projects/{projectId}/assign/{freelancerId}", 1L, 2L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void shouldHandleRuntimeException() throws Exception {
+        when(projectService.getProjectById(anyLong())).thenThrow(new RuntimeException("Error occurred"));
+
+        mockMvc.perform(get("/api/projects/{id}", 1L))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Not found"));
+                .andExpect(content().string("Error occurred"));
+    }
+
+    @Test
+    void shouldSearchProjectsWhenKeywordProvided() throws Exception {
+        List<ProjectDTO> projects = List.of(projectDTO);
+        when(projectService.searchProjects("Test", "OPEN")).thenReturn(projects);
+
+        mockMvc.perform(get("/api/projects")
+                        .param("keyword", "Test")
+                        .param("status", "OPEN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void shouldGetProjectsByCategory() throws Exception {
+        List<ProjectDTO> projects = List.of(projectDTO);
+        when(projectService.getProjectsByCategory("IT")).thenReturn(projects);
+
+        mockMvc.perform(get("/api/projects")
+                        .param("category", "IT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void shouldGetOpenProjectsWhenStatusIsOpen() throws Exception {
+        List<ProjectDTO> projects = List.of(projectDTO);
+        when(projectService.getOpenProjects()).thenReturn(projects);
+
+        mockMvc.perform(get("/api/projects")
+                        .param("status", "OPEN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 }

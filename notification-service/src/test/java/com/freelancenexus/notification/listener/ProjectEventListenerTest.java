@@ -1,18 +1,13 @@
 package com.freelancenexus.notification.listener;
 
-import com.freelancenexus.notification.dto.NotificationDTO;
-import com.freelancenexus.notification.event.ProjectCreatedEvent;
-import com.freelancenexus.notification.event.ProjectUpdatedEvent;
+import com.freelancenexus.notification.dto.ProjectEventDTO;
 import com.freelancenexus.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,55 +16,71 @@ class ProjectEventListenerTest {
     @Mock
     private NotificationService notificationService;
 
-    @Mock
-    private Logger log;
-
     @InjectMocks
-    private ProjectEventListener projectEventListener;
+    private ProjectEventListener listener;
 
-    private ProjectCreatedEvent createdEvent;
-    private ProjectUpdatedEvent updatedEvent;
+    private ProjectEventDTO projectEvent;
 
     @BeforeEach
     void setUp() {
-        createdEvent = new ProjectCreatedEvent(this, "user123", "New AI Project");
-        updatedEvent = new ProjectUpdatedEvent(this, "user123", "Updated AI Project");
+        projectEvent = new ProjectEventDTO();
+        projectEvent.setProjectId(1L);
+        projectEvent.setClientEmail("client@example.com");
+        projectEvent.setProjectTitle("Test Project");
+        projectEvent.setAssignedFreelancerId(200L);
+        projectEvent.setFreelancerEmail("freelancer@example.com");
     }
 
     @Test
-    void testHandleProjectCreated_Success() {
-        doNothing().when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldHandleProjectCreatedEvent() {
+        // Simulate service call success
+        doNothing().when(notificationService).handleProjectCreated(projectEvent);
 
-        projectEventListener.handleProjectCreated(createdEvent);
+        listener.handleProjectCreated(projectEvent);
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        verify(notificationService, times(1)).handleProjectCreated(projectEvent);
     }
 
     @Test
-    void testHandleProjectUpdated_Success() {
-        doNothing().when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldThrowWhenProjectCreatedFails() {
+        doThrow(new RuntimeException("Service failure"))
+                .when(notificationService).handleProjectCreated(projectEvent);
 
-        projectEventListener.handleProjectUpdated(updatedEvent);
+        RuntimeException exception = null;
+        try {
+            listener.handleProjectCreated(projectEvent);
+        } catch (RuntimeException e) {
+            exception = e;
+        }
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        assert exception != null;
+        assert exception.getMessage().equals("Service failure");
+        verify(notificationService, times(1)).handleProjectCreated(projectEvent);
     }
 
     @Test
-    void testHandleProjectCreated_ExceptionHandled() {
-        doThrow(new RuntimeException("Boom")).when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldHandleProjectAssignedEvent() {
+        doNothing().when(notificationService).handleProjectAssigned(projectEvent);
 
-        projectEventListener.handleProjectCreated(createdEvent);
+        listener.handleProjectAssigned(projectEvent);
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
-        // Exception is caught internally, no throw expected
+        verify(notificationService, times(1)).handleProjectAssigned(projectEvent);
     }
 
     @Test
-    void testHandleProjectUpdated_ExceptionHandled() {
-        doThrow(new RuntimeException("Crash")).when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldThrowWhenProjectAssignedFails() {
+        doThrow(new RuntimeException("Service failure"))
+                .when(notificationService).handleProjectAssigned(projectEvent);
 
-        projectEventListener.handleProjectUpdated(updatedEvent);
+        RuntimeException exception = null;
+        try {
+            listener.handleProjectAssigned(projectEvent);
+        } catch (RuntimeException e) {
+            exception = e;
+        }
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        assert exception != null;
+        assert exception.getMessage().equals("Service failure");
+        verify(notificationService, times(1)).handleProjectAssigned(projectEvent);
     }
 }

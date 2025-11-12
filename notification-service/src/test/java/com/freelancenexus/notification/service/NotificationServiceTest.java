@@ -1,22 +1,22 @@
 package com.freelancenexus.notification.service;
 
-import com.freelancenexus.notification.dto.NotificationDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.freelancenexus.notification.dto.*;
 import com.freelancenexus.notification.model.Notification;
+import com.freelancenexus.notification.model.NotificationType;
 import com.freelancenexus.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,109 +29,177 @@ class NotificationServiceTest {
     private EmailService emailService;
 
     @Mock
-    private Logger log;
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private NotificationService notificationService;
 
-    private Notification notification;
+    private ProjectEventDTO projectEvent;
+    private ProposalEventDTO proposalEvent;
+    private PaymentEventDTO paymentEvent;
 
     @BeforeEach
-    void setUp() {
-        notification = Notification.builder()
-                .id("notif123")
-                .userId("user1")
-                .title("Test Title")
-                .message("Test Message")
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+    void setUp() throws Exception {
+        // Common ObjectMapper mock for metadata
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"mocked\":\"metadata\"}");
+
+        // Sample ProjectEventDTO
+        projectEvent = new ProjectEventDTO(1L, 100L, "client@example.com",
+                "Test Project", "Desc", 500.0, "OPEN", 200L,
+                "Freelancer Name", "freelancer@example.com", LocalDateTime.now());
+
+        // Sample ProposalEventDTO
+        proposalEvent = new ProposalEventDTO(10L, 1L, "Test Project",
+                200L, "Freelancer Name", "freelancer@example.com",
+                100L, "client@example.com", 250.0, "SUBMITTED", LocalDateTime.now());
+
+        // Sample PaymentEventDTO
+        paymentEvent = new PaymentEventDTO(1000L, 1L, "Test Project",
+                100L, "payer@example.com", 200L, "receiver@example.com",
+                300.0, "USD", "COMPLETED", "TX123", LocalDateTime.now());
+    }
+
+    // ===================== Project Events =====================
+
+    @Test
+    void shouldHandleProjectCreatedSuccessfully() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        assertDoesNotThrow(() -> notificationService.handleProjectCreated(projectEvent));
+
+        verify(notificationRepository, times(2)).save(any(Notification.class)); // before and after emailSent
+        verify(emailService, times(1)).sendProjectCreatedEmail(projectEvent.getClientEmail(), projectEvent.getProjectTitle());
     }
 
     @Test
-    void testSendNotification_Success() {
-        NotificationDTO dto = new NotificationDTO();
-        dto.setUserId("user1");
-        dto.setTitle("Hello");
-        dto.setMessage("Welcome message");
+    void shouldThrowExceptionWhenProjectCreatedFails() {
+        when(notificationRepository.save(any(Notification.class))).thenThrow(new RuntimeException("DB Error"));
 
-        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
-        doNothing().when(emailService).sendEmail(any(), any(), any());
-
-        notificationService.sendNotification(dto);
-
-        verify(notificationRepository, times(1)).save(any(Notification.class));
-        verify(emailService, times(1)).sendEmail(eq("user1"), eq("Hello"), eq("Welcome message"));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> notificationService.handleProjectCreated(projectEvent));
+        assertTrue(exception.getMessage().contains("Notification processing failed"));
     }
 
     @Test
-    void testSendNotification_RepositoryThrowsException() {
-        NotificationDTO dto = new NotificationDTO();
-        dto.setUserId("user1");
-        dto.setTitle("Error");
-        dto.setMessage("Repo fails");
+    void shouldHandleProjectAssignedSuccessfully() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        when(notificationRepository.save(any(Notification.class)))
-                .thenThrow(new RuntimeException("DB error"));
+        assertDoesNotThrow(() -> notificationService.handleProjectAssigned(projectEvent));
 
-        // Should not throw — just log
-        notificationService.sendNotification(dto);
-
-        verify(notificationRepository, times(1)).save(any(Notification.class));
-        verify(emailService, never()).sendEmail(any(), any(), any());
+        verify(notificationRepository, times(2)).save(any(Notification.class)); // before and after emailSent
+        verify(emailService, times(1)).sendProposalAcceptedEmail(projectEvent.getFreelancerEmail(), projectEvent.getProjectTitle());
     }
 
     @Test
-    void testGetNotificationsByUserId_Found() {
-        when(notificationRepository.findByUserId("user1")).thenReturn(List.of(notification));
+    void shouldHandleProposalSubmittedSuccessfully() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        List<Notification> result = notificationService.getNotificationsByUserId("user1");
+        assertDoesNotThrow(() -> notificationService.handleProposalSubmitted(proposalEvent));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getId()).isEqualTo("notif123");
-        verify(notificationRepository, times(1)).findByUserId("user1");
+        verify(notificationRepository, times(3)).save(any(Notification.class)); // client + freelancer notifications
+        verify(emailService, times(1)).sendProposalReceivedEmail(
+                proposalEvent.getClientEmail(),
+                proposalEvent.getFreelancerName(),
+                proposalEvent.getProjectTitle()
+        );
     }
 
     @Test
-    void testGetNotificationsByUserId_Empty() {
-        when(notificationRepository.findByUserId("user2")).thenReturn(List.of());
+    void shouldHandlePaymentCompletedSuccessfully() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        List<Notification> result = notificationService.getNotificationsByUserId("user2");
+        assertDoesNotThrow(() -> notificationService.handlePaymentCompleted(paymentEvent));
 
-        assertThat(result).isEmpty();
-        verify(notificationRepository, times(1)).findByUserId("user2");
+        verify(notificationRepository, times(4)).save(any(Notification.class)); // payer + receiver, each before/after emailSent
+        verify(emailService, times(1)).sendPaymentCompletedEmail(
+                paymentEvent.getPayerEmail(),
+                paymentEvent.getAmount(),
+                paymentEvent.getTransactionId(),
+                paymentEvent.getCurrency()
+        );
+        verify(emailService, times(1)).sendPaymentReceivedEmail(
+                paymentEvent.getReceiverEmail(),
+                paymentEvent.getAmount(),
+                paymentEvent.getTransactionId(),
+                paymentEvent.getProjectTitle(),
+                paymentEvent.getCurrency()
+        );
+    }
+
+    // ===================== Fetch Notifications =====================
+
+    @Test
+    void shouldReturnUserNotifications() {
+        Notification notification = new Notification();
+        notification.setUserId(100L);
+
+        when(notificationRepository.findByUserIdOrderByCreatedAtDesc(100L))
+                .thenReturn(Collections.singletonList(notification));
+
+        var result = notificationService.getUserNotifications(100L);
+        assertEquals(1, result.size());
+        assertEquals(100L, result.get(0).getUserId());
     }
 
     @Test
-    void testMarkAsRead_Found() {
-        Notification unread = Notification.builder()
-                .id("notif456")
-                .userId("user2")
-                .title("Old")
-                .message("Old Message")
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+    void shouldReturnUnreadNotifications() {
+        Notification notification = new Notification();
+        notification.setIsRead(false);
+        notification.setUserId(100L);
 
-        when(notificationRepository.findById("notif456")).thenReturn(Optional.of(unread));
-        when(notificationRepository.save(any(Notification.class))).thenReturn(unread);
+        when(notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(100L))
+                .thenReturn(Collections.singletonList(notification));
 
-        Notification updated = notificationService.markAsRead("notif456");
+        var result = notificationService.getUnreadNotifications(100L);
+        assertEquals(1, result.size());
+        assertFalse(result.get(0).getIsRead());
+    }
 
-        assertThat(updated).isNotNull();
-        assertThat(updated.isRead()).isTrue();
-        verify(notificationRepository, times(1)).findById("notif456");
-        verify(notificationRepository, times(1)).save(any(Notification.class));
+    // ===================== Mark As Read =====================
+
+    @Test
+    void shouldMarkNotificationAsRead() {
+        Notification notification = new Notification();
+        notification.setId(1L);
+        notification.setIsRead(false);
+
+        when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Notification result = notificationService.markAsRead(1L);
+        assertTrue(result.getIsRead());
+        assertNotNull(result.getReadAt());
+
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationRepository, times(1)).save(notification);
     }
 
     @Test
-    void testMarkAsRead_NotFound() {
-        when(notificationRepository.findById("missing")).thenReturn(Optional.empty());
+    void shouldThrowWhenNotificationNotFound() {
+        when(notificationRepository.findById(1L)).thenReturn(Optional.empty());
 
-        Notification result = notificationService.markAsRead("missing");
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> notificationService.markAsRead(1L));
+        assertTrue(exception.getMessage().contains("Notification not found"));
+    }
 
-        assertThat(result).isNull();
-        verify(notificationRepository, times(1)).findById("missing");
-        verify(notificationRepository, never()).save(any(Notification.class));
+    @Test
+    void shouldMarkAllNotificationsAsRead() {
+        Notification n1 = new Notification();
+        n1.setIsRead(false);
+        Notification n2 = new Notification();
+        n2.setIsRead(false);
+
+        when(notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(100L))
+                .thenReturn(Arrays.asList(n1, n2));
+        when(notificationRepository.saveAll(anyList())).thenReturn(Arrays.asList(n1, n2));
+
+        notificationService.markAllAsRead(100L);
+
+        assertTrue(n1.getIsRead());
+        assertTrue(n2.getIsRead());
+        assertNotNull(n1.getReadAt());
+        assertNotNull(n2.getReadAt());
+        verify(notificationRepository, times(1)).saveAll(anyList());
     }
 }

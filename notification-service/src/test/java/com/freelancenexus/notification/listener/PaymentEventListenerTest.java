@@ -1,17 +1,13 @@
 package com.freelancenexus.notification.listener;
 
-import com.freelancenexus.notification.dto.NotificationDTO;
-import com.freelancenexus.notification.event.PaymentCompletedEvent;
+import com.freelancenexus.notification.dto.PaymentEventDTO;
 import com.freelancenexus.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -20,35 +16,50 @@ class PaymentEventListenerTest {
     @Mock
     private NotificationService notificationService;
 
-    @Mock
-    private Logger log;
-
     @InjectMocks
-    private PaymentEventListener paymentEventListener;
+    private PaymentEventListener listener;
 
-    private PaymentCompletedEvent paymentEvent;
+    private PaymentEventDTO paymentEvent;
 
     @BeforeEach
     void setUp() {
-        paymentEvent = new PaymentCompletedEvent(this, "freelancer123", "Cool Project", 2500.00);
+        paymentEvent = new PaymentEventDTO();
+        paymentEvent.setPaymentId(1000L);
+        paymentEvent.setProjectId(1L);
+        paymentEvent.setProjectTitle("Test Project");
+        paymentEvent.setPayerId(100L);
+        paymentEvent.setPayerEmail("payer@example.com");
+        paymentEvent.setReceiverId(200L);
+        paymentEvent.setReceiverEmail("receiver@example.com");
+        paymentEvent.setAmount(300.0);
+        paymentEvent.setCurrency("USD");
+        paymentEvent.setStatus("COMPLETED");
+        paymentEvent.setTransactionId("TX123");
     }
 
     @Test
-    void testHandlePaymentCompleted_Success() {
-        doNothing().when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldHandlePaymentCompletedEvent() {
+        doNothing().when(notificationService).handlePaymentCompleted(paymentEvent);
 
-        paymentEventListener.handlePaymentCompleted(paymentEvent);
+        listener.handlePaymentCompleted(paymentEvent);
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        verify(notificationService, times(1)).handlePaymentCompleted(paymentEvent);
     }
 
     @Test
-    void testHandlePaymentCompleted_ExceptionHandled() {
-        doThrow(new RuntimeException("Notification failed"))
-                .when(notificationService).sendNotification(any(NotificationDTO.class));
+    void shouldThrowWhenPaymentCompletedFails() {
+        doThrow(new RuntimeException("Service failure"))
+                .when(notificationService).handlePaymentCompleted(paymentEvent);
 
-        paymentEventListener.handlePaymentCompleted(paymentEvent);
+        RuntimeException exception = null;
+        try {
+            listener.handlePaymentCompleted(paymentEvent);
+        } catch (RuntimeException e) {
+            exception = e;
+        }
 
-        verify(notificationService, times(1)).sendNotification(any(NotificationDTO.class));
+        assert exception != null;
+        assert exception.getMessage().equals("Service failure");
+        verify(notificationService, times(1)).handlePaymentCompleted(paymentEvent);
     }
 }

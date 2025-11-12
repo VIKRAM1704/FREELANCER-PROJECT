@@ -21,8 +21,6 @@ import org.slf4j.LoggerFactory;
 @Slf4j
 public class GlobalExceptionHandler {
     
-	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-	
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFoundException(
             UserNotFoundException ex, 

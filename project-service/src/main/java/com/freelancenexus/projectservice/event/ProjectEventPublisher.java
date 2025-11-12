@@ -1,6 +1,5 @@
 package com.freelancenexus.projectservice.event;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -16,7 +15,6 @@ import java.util.Map;
 public class ProjectEventPublisher {
     
     private final RabbitTemplate rabbitTemplate;
-    private final ObjectMapper objectMapper;
     
     private static final String EXCHANGE = "freelance-nexus-exchange";
     

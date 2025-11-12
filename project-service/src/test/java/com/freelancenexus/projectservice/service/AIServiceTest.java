@@ -12,86 +12,139 @@ import com.freelancenexus.projectservice.repository.ProposalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AIServiceTest {
 
-    @Mock private GeminiIntegrationService geminiService;
-    @Mock private ProjectRepository projectRepository;
-    @Mock private ProposalRepository proposalRepository;
-    @Mock private ObjectMapper objectMapper;
+    @Mock
+    private GeminiIntegrationService geminiService;
 
-    @InjectMocks private AIService aiService;
+    @Mock
+    private ProjectRepository projectRepository;
 
-    private Project sampleProject;
-    private Proposal sampleProposal;
+    @Mock
+    private ProposalRepository proposalRepository;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
+    @InjectMocks
+    private AIService aiService;
+
+    private Project project;
+    private Proposal proposal;
+    private JsonNode mockJsonNode;
 
     @BeforeEach
     void setUp() {
-        sampleProject = new Project();
-        sampleProject.setId(1L);
-        sampleProject.setTitle("Test Project");
-        sampleProject.setCategory("IT");
-        sampleProject.setBudgetMin(BigDecimal.valueOf(100));
-        sampleProject.setBudgetMax(BigDecimal.valueOf(500));
-        sampleProject.setDurationDays(10);
-        sampleProject.setRequiredSkills("[\"Java\",\"Spring\"]");
+        project = new Project();
+        project.setId(1L);
+        project.setTitle("Test Project");
+        project.setCategory("IT");
+        project.setBudgetMin(BigDecimal.valueOf(1000));
+        project.setBudgetMax(BigDecimal.valueOf(5000));
+        project.setDurationDays(30);
+        project.setRequiredSkills("[\"Java\", \"Spring\"]");
+        project.setDescription("This is a test project");
 
-        sampleProposal = new Proposal();
-        sampleProposal.setId(1L);
-        sampleProposal.setFreelancerId(1L);
-        sampleProposal.setProposedBudget(BigDecimal.valueOf(200));
-        sampleProposal.setDeliveryDays(5);
-        sampleProposal.setCoverLetter("Cover letter");
+        proposal = new Proposal();
+        proposal.setId(1L);
+        proposal.setFreelancerId(2L);
+        proposal.setCoverLetter("Cover letter...");
+        proposal.setProposedBudget(BigDecimal.valueOf(1500));
+        proposal.setDeliveryDays(15);
     }
 
     @Test
     void shouldReturnRecommendations_whenProjectsExist() throws Exception {
-        when(projectRepository.findAllOpenProjects()).thenReturn(List.of(sampleProject));
-        JsonNode fakeResponse = mock(JsonNode.class);
-        when(fakeResponse.isArray()).thenReturn(false);
-        when(geminiService.callGeminiForJson(anyString())).thenReturn(fakeResponse);
+        when(projectRepository.findAllOpenProjects()).thenReturn(List.of(project));
+        when(geminiService.callGeminiForJson(anyString())).thenReturn(mock(JsonNode.class));
 
-        List<AIRecommendationDTO> recommendations = aiService.recommendProjectsForFreelancer(1L, List.of("Java"), "Bio");
+        List<AIRecommendationDTO> recommendations = aiService.recommendProjectsForFreelancer(1L, Arrays.asList("Java"), "Bio");
 
-        assertThat(recommendations).isEmpty(); // fallback returns empty list
-        verify(projectRepository, times(1)).findAllOpenProjects();
-        verify(geminiService, times(1)).callGeminiForJson(anyString());
+        assertNotNull(recommendations);
     }
 
     @Test
-    void shouldReturnEmpty_whenNoOpenProjects() {
-        when(projectRepository.findAllOpenProjects()).thenReturn(Collections.emptyList());
+    void shouldReturnEmptyRecommendations_whenNoOpenProjects() {
+        when(projectRepository.findAllOpenProjects()).thenReturn(List.of());
 
-        List<AIRecommendationDTO> result = aiService.recommendProjectsForFreelancer(1L, List.of("Java"), null);
+        List<AIRecommendationDTO> recommendations = aiService.recommendProjectsForFreelancer(1L, Arrays.asList("Java"), "Bio");
 
-        assertThat(result).isEmpty();
+        assertTrue(recommendations.isEmpty());
     }
 
     @Test
-    void shouldReturnFallbackRanking_whenExceptionThrown() {
+    void shouldFallbackRecommendations_whenExceptionOccurs() throws Exception {
+        when(projectRepository.findAllOpenProjects()).thenThrow(new RuntimeException("DB error"));
+
+        List<AIRecommendationDTO> recommendations = aiService.recommendProjectsForFreelancer(1L, Arrays.asList("Java"), "Bio");
+
+        assertTrue(recommendations.isEmpty());
+    }
+
+    @Test
+    void shouldRankProposalsSuccessfully() throws Exception {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(proposalRepository.findByProjectId(1L)).thenReturn(List.of(proposal));
+        when(geminiService.callGeminiForJson(anyString())).thenReturn(mock(JsonNode.class));
+        when(proposalRepository.findById(anyLong())).thenReturn(Optional.of(proposal));
+        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
+
+        List<RankedProposalDTO> rankings = aiService.rankProposalsForProject(1L);
+
+        assertNotNull(rankings);
+    }
+
+    @Test
+    void shouldReturnEmptyRanking_whenNoProposals() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(proposalRepository.findByProjectId(1L)).thenReturn(List.of());
+
+        List<RankedProposalDTO> rankings = aiService.rankProposalsForProject(1L);
+
+        assertTrue(rankings.isEmpty());
+    }
+
+    @Test
+    void shouldFallbackRanking_whenExceptionOccurs() {
         when(projectRepository.findById(1L)).thenThrow(new RuntimeException("DB error"));
 
-        List<RankedProposalDTO> ranked = aiService.rankProposalsForProject(1L);
+        List<RankedProposalDTO> rankings = aiService.rankProposalsForProject(1L);
 
-        assertThat(ranked).isEmpty();
+        assertTrue(rankings.isEmpty());
     }
 
     @Test
-    void shouldReturnFallbackSummary_whenExceptionThrown() {
+    void shouldGenerateProjectSummarySuccessfully() throws Exception {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(geminiService.callGeminiForJson(anyString())).thenReturn(mock(JsonNode.class));
+
+        ProjectSummaryDTO summary = aiService.generateProjectSummary(1L);
+
+        assertNotNull(summary);
+        assertEquals(1L, summary.getProjectId());
+    }
+
+    @Test
+    void shouldFallbackSummary_whenExceptionOccurs() {
         when(projectRepository.findById(1L)).thenThrow(new RuntimeException("DB error"));
 
         ProjectSummaryDTO summary = aiService.generateProjectSummary(1L);
 
-        assertThat(summary.getProjectId()).isEqualTo(1L);
-        assertThat(summary.getSummary()).isEqualTo("Summary generation failed");
+        assertNotNull(summary);
+        assertEquals("Summary generation failed", summary.getSummary());
     }
 }

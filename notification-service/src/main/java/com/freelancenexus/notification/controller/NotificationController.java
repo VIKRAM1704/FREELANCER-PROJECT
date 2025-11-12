@@ -6,6 +6,7 @@ import com.freelancenexus.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +20,9 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+    // Users can only view their own notifications
     @GetMapping("/user/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NotificationDTO>> getUserNotifications(@PathVariable Long userId) {
         log.info("Fetching notifications for user: {}", userId);
         List<Notification> notifications = notificationService.getUserNotifications(userId);
@@ -30,6 +33,7 @@ public class NotificationController {
     }
 
     @GetMapping("/user/{userId}/unread")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NotificationDTO>> getUnreadNotifications(@PathVariable Long userId) {
         log.info("Fetching unread notifications for user: {}", userId);
         List<Notification> notifications = notificationService.getUnreadNotifications(userId);
@@ -40,6 +44,7 @@ public class NotificationController {
     }
 
     @GetMapping("/user/{userId}/unread/count")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Long> getUnreadCount(@PathVariable Long userId) {
         log.info("Fetching unread count for user: {}", userId);
         List<Notification> notifications = notificationService.getUnreadNotifications(userId);
@@ -47,6 +52,7 @@ public class NotificationController {
     }
 
     @PutMapping("/{id}/read")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<NotificationDTO> markAsRead(@PathVariable Long id) {
         log.info("Marking notification as read: {}", id);
         Notification notification = notificationService.markAsRead(id);
@@ -54,12 +60,14 @@ public class NotificationController {
     }
 
     @PutMapping("/user/{userId}/read-all")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> markAllAsRead(@PathVariable Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok("All notifications marked as read");
     }
 
+    // Public health check
     @GetMapping("/health")
     public ResponseEntity<String> healthCheck() {
         return ResponseEntity.ok("Notification Service is running");

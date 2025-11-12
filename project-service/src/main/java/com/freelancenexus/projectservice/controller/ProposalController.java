@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +21,9 @@ public class ProposalController {
 
     private final ProposalService proposalService;
 
+    // Only freelancers can submit proposals
     @PostMapping("/projects/{projectId}/proposals")
+    @PreAuthorize("hasRole('FREELANCER')")
     public ResponseEntity<ProposalDTO> submitProposal(
             @PathVariable Long projectId,
             @Valid @RequestBody ProposalSubmitDTO submitDTO) {
@@ -29,7 +32,9 @@ public class ProposalController {
         return ResponseEntity.status(HttpStatus.CREATED).body(proposal);
     }
 
+    // Client can view proposals for their projects
     @GetMapping("/projects/{projectId}/proposals")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<List<ProposalDTO>> getProjectProposals(
             @PathVariable Long projectId,
             @RequestParam(defaultValue = "false") boolean ranked) {
@@ -45,28 +50,36 @@ public class ProposalController {
         return ResponseEntity.ok(proposals);
     }
 
+    // Both client and freelancer can view proposal details
     @GetMapping("/proposals/{id}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'FREELANCER')")
     public ResponseEntity<ProposalDTO> getProposal(@PathVariable Long id) {
         log.info("GET /api/proposals/{} - Fetching proposal", id);
         ProposalDTO proposal = proposalService.getProposalById(id);
         return ResponseEntity.ok(proposal);
     }
 
+    // Freelancer can view their own proposals
     @GetMapping("/proposals/freelancer/{freelancerId}")
+    @PreAuthorize("hasRole('FREELANCER')")
     public ResponseEntity<List<ProposalDTO>> getFreelancerProposals(@PathVariable Long freelancerId) {
         log.info("GET /api/proposals/freelancer/{} - Fetching freelancer proposals", freelancerId);
         List<ProposalDTO> proposals = proposalService.getProposalsByFreelancerId(freelancerId);
         return ResponseEntity.ok(proposals);
     }
 
+    // Only client can accept proposals
     @PutMapping("/proposals/{id}/accept")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<ProposalDTO> acceptProposal(@PathVariable Long id) {
         log.info("PUT /api/proposals/{}/accept - Accepting proposal", id);
         ProposalDTO proposal = proposalService.acceptProposal(id);
         return ResponseEntity.ok(proposal);
     }
 
+    // Only client can reject proposals
     @PutMapping("/proposals/{id}/reject")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<ProposalDTO> rejectProposal(@PathVariable Long id) {
         log.info("PUT /api/proposals/{}/reject - Rejecting proposal", id);
         ProposalDTO proposal = proposalService.rejectProposal(id);

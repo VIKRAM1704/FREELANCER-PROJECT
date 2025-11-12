@@ -5,7 +5,6 @@ import com.freelancenexus.userservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,11 +15,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 @Slf4j
-@RequiredArgsConstructor // This generates constructor for final fields
+@RequiredArgsConstructor
 public class UserController {
       
     private final UserService userService;
 	
+    // Public endpoints - No authentication required
     @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> registerUser(@Valid @RequestBody UserRegistrationDTO registrationDTO) {
         log.info("Received registration request for email: {}", registrationDTO.getEmail());
@@ -35,6 +35,7 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     
+    // Authenticated user endpoints
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponseDTO> getCurrentUserProfile() {
@@ -51,16 +52,18 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     
+    // Any authenticated user can view other users
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT', 'ROLE_FREELANCER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT', 'FREELANCER')")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
         log.info("Received request to get user by ID: {}", id);
         UserResponseDTO response = userService.getUserById(id);
         return ResponseEntity.ok(response);
     }
     
+    // Admin only endpoints
     @GetMapping
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         log.info("Received request to get all users");
         List<UserResponseDTO> response = userService.getAllUsers();
@@ -68,7 +71,7 @@ public class UserController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         log.info("Received request to delete user with ID: {}", id);
         userService.deleteUser(id);
